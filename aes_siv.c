@@ -499,6 +499,8 @@ static void test_vector_1() {
         assert(ret == 1);
         assert(ciphertext_len == sizeof ciphertext);
         assert(!memcmp(ciphertext, ciphertext_out, ciphertext_len));
+	AES_SIV_CTX_cleanup(ctx);
+	AES_SIV_CTX_free(ctx);
 }
 
 static void test_vector_2() {
@@ -593,7 +595,8 @@ static void test_vector_2() {
         assert(ret == 1);
         debug("plaintext", plaintext_out, sizeof plaintext);
         assert(!memcmp(plaintext_out, plaintext, sizeof plaintext));
-
+	AES_SIV_CTX_cleanup(ctx);
+	AES_SIV_CTX_free(ctx);
 }
 
 int main() {
