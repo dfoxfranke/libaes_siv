@@ -17,6 +17,9 @@ suitable for release, any discovered vulnerabilities will not be
 assigned CVEs or announced anywhere more prominent than the commit
 log.
 
+See the manual pages for API documentation, and the test vectors
+at the end of `aes_siv.c` for simple usage examples.
+
 Build dependencies:
 
 * Any ANSI C compiler (GCC or Clang recommended)
