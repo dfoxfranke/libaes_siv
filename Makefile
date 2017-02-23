@@ -23,7 +23,7 @@ clean:
 aes_siv.o: aes_siv.c aes_siv.h
 	$(CC) -c $(WARNFLAGS) $(OPTFLAGS) aes_siv.c
 
-aes_siv_test.o:
+aes_siv_test.o: aes_siv.c aes_siv.h
 	$(CC) -c -o aes_siv_test.o $(WARNFLAGS) $(DEBUGFLAGS) aes_siv.c
 
 aes-siv-test: aes_siv_test.o
