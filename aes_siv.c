@@ -270,7 +270,9 @@ int AES_SIV_EncryptFinal(AES_SIV_CTX *ctx,
         size_t out_len = sizeof q;
         uint64_t ctr;
 
-	if((uint64_t)len >= ((uint64_t)1)<<63) goto fail;
+#if (SIZE_MAX>>67) > 0
+	if(len >= ((size_t)1)<<67) goto fail;
+#endif
 
         if(CMAC_CTX_copy(ctx->cmac_ctx, ctx->cmac_ctx_init) != 1) goto fail;
         if(len >= 16) {
@@ -341,7 +343,9 @@ int AES_SIV_DecryptFinal(AES_SIV_CTX *ctx, uint8_t *out,
         uint64_t ctr;
 	int ret;
 
-	if((uint64_t)len >= ((uint64_t)1)<<63) goto fail;
+#if (SIZE_MAX>>67) > 0
+	if(len >= ((size_t)1)<<67) goto fail;
+#endif
 	
         memcpy(q, v, 16);
         q[8] &= 0x7f;
