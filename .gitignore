@@ -1,0 +1,9 @@
+\#*\#
+*~
+*.o
+*.3
+*.gcda
+*.gcno
+*.gcov
+aes-siv-test
+libaes_siv.a
