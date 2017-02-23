@@ -490,15 +490,17 @@ static void test_vector_1() {
                               plaintext, sizeof plaintext,
                               ad, sizeof ad);
         assert(ret == 1);
+	assert(ciphertext_len == sizeof ciphertext);
+	assert(!memcmp(ciphertext, ciphertext_out, ciphertext_len));
 
         printf("Decryption:\n");
         ret = AES_SIV_Decrypt(ctx, plaintext_out, &plaintext_len,
                               key, sizeof key, NULL, 0,
-                              ciphertext, ciphertext_len,
+                              ciphertext_out, ciphertext_len,
                               ad, sizeof ad);
         assert(ret == 1);
-        assert(ciphertext_len == sizeof ciphertext);
-        assert(!memcmp(ciphertext, ciphertext_out, ciphertext_len));
+        assert(plaintext_len == sizeof plaintext);
+	assert(!memcmp(plaintext, plaintext_out, plaintext_len));
 	AES_SIV_CTX_cleanup(ctx);
 	AES_SIV_CTX_free(ctx);
 }
