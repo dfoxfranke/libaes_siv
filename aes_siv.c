@@ -337,6 +337,7 @@ int AES_SIV_DecryptFinal(AES_SIV_CTX *ctx, uint8_t *out,
         size_t orig_len = len;
         size_t out_len = sizeof q;
         uint64_t ctr;
+	int ret;
 
         memcpy(q, v, 16);
         q[8] &= 0x7f;
@@ -369,7 +370,7 @@ int AES_SIV_DecryptFinal(AES_SIV_CTX *ctx, uint8_t *out,
 
         len = orig_len;
         out = orig_out;
-        if(CMAC_CTX_copy(ctx->cmac_ctx, ctx->cmac_ctx_init) != 1) return 0;
+        if(CMAC_CTX_copy(ctx->cmac_ctx, ctx->cmac_ctx_init) != 1) goto fail;
         if(len >= 16) {
                 debug("xorend part 1", out, len-16);
                 if(CMAC_Update(ctx->cmac_ctx, out, len-16)
@@ -377,7 +378,7 @@ int AES_SIV_DecryptFinal(AES_SIV_CTX *ctx, uint8_t *out,
                 memcpy(t, out + (len-16), 16);
                 xorblock(t, ctx->d);
                 debug("xorend part 2", t, 16);
-                if(CMAC_Update(ctx->cmac_ctx, t, 16) != 1) return 0;
+                if(CMAC_Update(ctx->cmac_ctx, t, 16) != 1) goto fail;
         } else {
                 size_t i;
                 memcpy(t, out, len);
@@ -387,15 +388,22 @@ int AES_SIV_DecryptFinal(AES_SIV_CTX *ctx, uint8_t *out,
                 dbl(ctx->d);
                 xorblock(t, ctx->d);
                 debug("xor", t, 16);
-                if(CMAC_Update(ctx->cmac_ctx, t, 16) != 1) return 0;
+                if(CMAC_Update(ctx->cmac_ctx, t, 16) != 1) goto fail;
         }
         
-        if(CMAC_Final(ctx->cmac_ctx, t, &out_len) != 1) return 0;
+        if(CMAC_Final(ctx->cmac_ctx, t, &out_len) != 1) goto fail;
         debug("CMAC(final)", t, 16);
         assert(out_len == 16);
 
         xorblock(t, v);
-        return (be64dec(t) | be64dec(t + 8)) == 0;
+        ret = (be64dec(t) | be64dec(t + 8)) == 0;
+	OPENSSL_cleanse(t, sizeof t);
+	OPENSSL_cleanse(q, sizeof q);
+	return ret;
+fail:
+	OPENSSL_cleanse(t, sizeof t);
+	OPENSSL_cleanse(q, sizeof q);
+	return 0;
 }
         
 int AES_SIV_Encrypt(AES_SIV_CTX *ctx,
