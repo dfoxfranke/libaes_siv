@@ -4,6 +4,7 @@
 #include "aes_siv.h"
 
 #include <assert.h>
+#include <inttypes.h>
 #include <stddef.h>
 #include <stdint.h>
 #ifdef AES_SIV_DEBUG
@@ -15,6 +16,14 @@
 #include <openssl/evp.h>
 #include <openssl/cmac.h>
 #include <openssl/crypto.h>
+
+#if CHAR_BIT != 8
+#error "libaes_siv requires an 8-bit char type"
+#endif
+
+#if -1 != ~0
+#error "libaes_siv requires a two's-complement architecture"
+#endif
 
 #if defined(__STDC_VERSION__) && __STDC_VERSION__ >= 199901
 #undef inline
@@ -32,7 +41,7 @@ static void debug(const char *label, const uint8_t *hex, size_t len) {
         printf("%16s: ", label);
         for(i=0; i<len;i++) {
                 if(i > 0 && i%16 == 0) printf("\n                  ");
-                printf("%.2hhx", hex[i]);
+                printf("%.2"PRIx8, hex[i]);
                 if(i>0 && i%4 == 3) printf(" ");
 
         }
@@ -138,8 +147,8 @@ static inline void dbl(void *block) {
         uint64_t high = be64dec(b);
         uint64_t low = be64dec(b + 8);
 
-        uint64_t high_carry = high & (((uint64_t)1)<<63);
-        uint64_t low_carry = low & (((uint64_t)1)<<63);
+        uint64_t high_carry = high & (UINT64_C(1)<<63);
+        uint64_t low_carry = low & ((UINT64_C(1)<<63);
         /* Assumes two's-complement arithmetic */
         int64_t low_mask = -((int64_t)(high_carry>>63)) & 0x87;
         uint64_t high_mask = low_carry >> 63;

@@ -1,6 +1,7 @@
 #include "aes_siv.h"
 
 #include <assert.h>
+#include <inttypes.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
@@ -10,7 +11,7 @@ static void debug(const char *label, const uint8_t *hex, size_t len) {
         printf("%16s: ", label);
         for(i=0; i<len;i++) {
                 if(i > 0 && i%16 == 0) printf("\n                  ");
-                printf("%.2hhx", hex[i]);
+                printf("%.2"PRIx8, hex[i]);
                 if(i>0 && i%4 == 3) printf(" ");
 
         }
