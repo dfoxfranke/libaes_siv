@@ -26,14 +26,6 @@
 #define inline
 #endif
 
-#if defined(__GNUC__) && __GNUC__ >= 4
-#define ATTRIBUTE_UNUSED __attribute__((__unused__))
-#elif defined(__clang__)
-#define ATTRIBUTE_UNUSED __attribute__((__unused__))
-#else
-#define ATTRIBUTE_UNUSED
-#endif
-
 static void debug(const char *label, const uint8_t *hex, size_t len) {
 #ifdef AES_SIV_DEBUG
         size_t i;
@@ -50,35 +42,6 @@ static void debug(const char *label, const uint8_t *hex, size_t len) {
         (void)hex;
         (void)len;
 #endif
-}
-
-static inline uint64_t be64dec_portable(const void*) ATTRIBUTE_UNUSED;
-static inline void be64enc_portable(void*, uint64_t) ATTRIBUTE_UNUSED;
-
-static inline uint64_t be64dec_portable(const void *buf) {
-  const uint8_t *b = (const uint8_t*)buf;
-
-  return ((uint64_t)(b[0]) << 56) +
-    ((uint64_t)(b[1]) << 48) +
-    ((uint64_t)(b[2]) << 40) +
-    ((uint64_t)(b[3]) << 32) +
-    ((uint64_t)(b[4]) << 24) +
-    ((uint64_t)(b[5]) << 16) +
-    ((uint64_t)(b[6]) << 8) +
-    (uint64_t)(b[7]);
-}
-
-static inline void be64enc_portable(void *buf, uint64_t x) {
-  uint8_t *b = (uint8_t*)buf;
-  
-  b[0] = (uint8_t)((x >> 56) & 0xff);
-  b[1] = (uint8_t)((x >> 48) & 0xff);
-  b[2] = (uint8_t)((x >> 40) & 0xff);
-  b[3] = (uint8_t)((x >> 32) & 0xff);
-  b[4] = (uint8_t)((x >> 24) & 0xff);
-  b[5] = (uint8_t)((x >> 16) & 0xff);
-  b[6] = (uint8_t)((x >> 8)  & 0xff);
-  b[7] = (uint8_t)x & 0xff;
 }
 
 #if defined(__BYTE_ORDER__) && __BYTE_ORDER__ == __ORDER_BIG_ENDIAN__
@@ -113,21 +76,57 @@ static inline uint64_t be64dec(void const* buf) {
         return _byteswap_uint64(x);
 }
 #else /* not GCC/Clang, not MSVC */
-static inline void be64enc(void *buf, uint64_t x) {
-        be64enc_portable(buf, x);
+static inline uint64_t be64dec(const void *buf) {
+  const uint8_t *b = (const uint8_t*)buf;
+
+  return ((uint64_t)(b[0]) << 56) +
+    ((uint64_t)(b[1]) << 48) +
+    ((uint64_t)(b[2]) << 40) +
+    ((uint64_t)(b[3]) << 32) +
+    ((uint64_t)(b[4]) << 24) +
+    ((uint64_t)(b[5]) << 16) +
+    ((uint64_t)(b[6]) << 8) +
+    (uint64_t)(b[7]);
 }
 
-static inline uint64_t be64dec(void const* buf) {
-        return be64dec_portable(buf);
+static inline void be64enc(void *buf, uint64_t x) {
+  uint8_t *b = (uint8_t*)buf;
+  
+  b[0] = (uint8_t)((x >> 56) & 0xff);
+  b[1] = (uint8_t)((x >> 48) & 0xff);
+  b[2] = (uint8_t)((x >> 40) & 0xff);
+  b[3] = (uint8_t)((x >> 32) & 0xff);
+  b[4] = (uint8_t)((x >> 24) & 0xff);
+  b[5] = (uint8_t)((x >> 16) & 0xff);
+  b[6] = (uint8_t)((x >> 8)  & 0xff);
+  b[7] = (uint8_t)x & 0xff;
 }
 #endif
 #else /* weird or unspecified byte order */
-static inline void be64enc(void *buf, uint64_t x) {
-        be64enc_portable(buf, x);
+static inline uint64_t be64dec(const void *buf) {
+  const uint8_t *b = (const uint8_t*)buf;
+
+  return ((uint64_t)(b[0]) << 56) +
+    ((uint64_t)(b[1]) << 48) +
+    ((uint64_t)(b[2]) << 40) +
+    ((uint64_t)(b[3]) << 32) +
+    ((uint64_t)(b[4]) << 24) +
+    ((uint64_t)(b[5]) << 16) +
+    ((uint64_t)(b[6]) << 8) +
+    (uint64_t)(b[7]);
 }
 
-static inline uint64_t be64dec(void const* buf) {
-        return be64dec_portable(buf);
+static inline void be64enc(void *buf, uint64_t x) {
+  uint8_t *b = (uint8_t*)buf;
+  
+  b[0] = (uint8_t)((x >> 56) & 0xff);
+  b[1] = (uint8_t)((x >> 48) & 0xff);
+  b[2] = (uint8_t)((x >> 40) & 0xff);
+  b[3] = (uint8_t)((x >> 32) & 0xff);
+  b[4] = (uint8_t)((x >> 24) & 0xff);
+  b[5] = (uint8_t)((x >> 16) & 0xff);
+  b[6] = (uint8_t)((x >> 8)  & 0xff);
+  b[7] = (uint8_t)x & 0xff;
 }
 #endif
 
