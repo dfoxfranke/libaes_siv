@@ -6,7 +6,6 @@ LDFLAGS=-lcrypto
 OPTFLAGS=-O3 -fomit-frame-pointer -funroll-loops -ftree-vectorize -DNDEBUG
 DEBUGFLAGS=-g -Og -DAES_SIV_DEBUG=1
 
-
 all: aes-siv-test libaes_siv.a AES_SIV_CTX_new.3 AES_SIV_Encrypt.3 AES_SIV_Init.3
 
 install: aes_siv.h libaes_siv.a AES_SIV_CTX_new.3 AES_SIV_Encrypt.3 AES_SIV_Init.3

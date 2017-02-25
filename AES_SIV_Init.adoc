@@ -14,13 +14,13 @@ SYNOPSIS
 ----
 #include <aes_siv.h>
 
-int AES_SIV_Init(AES_SIV_CTX *ctx, uint8_t const* key, size_t key_len);
-int AES_SIV_AssociateData(AES_SIV_CTX *ctx, const uint8_t *data, size_t len);
+int AES_SIV_Init(AES_SIV_CTX *ctx, unsigned char const* key, size_t key_len);
+int AES_SIV_AssociateData(AES_SIV_CTX *ctx, unsigned char const* data, size_t len);
 int AES_SIV_EncryptFinal(AES_SIV_CTX *ctx,
-                         uint8_t *v_out, uint8_t *c_out,
-                         const uint8_t *plaintext, size_t len);
-int AES_SIV_DecryptFinal(AES_SIV_CTX *ctx, uint8_t *out,
-                         uint8_t const* v, uint8_t const *c,
+                         unsigned char *v_out, unsigned char *c_out,
+                         const unsigned char *plaintext, size_t len);
+int AES_SIV_DecryptFinal(AES_SIV_CTX *ctx, unsigned char *out,
+                         unsigned char const* v, unsigned char const *c,
                          size_t len);
 ----
 
@@ -73,11 +73,11 @@ omitted for brevity.
 [source,c]
 ----
 int AES_SIV_Encrypt(AES_SIV_CTX *ctx,
-                    uint8_t *out, size_t *out_len,
-                    uint8_t const* key, size_t key_len,
-                    uint8_t const* nonce, size_t nonce_len,
-                    uint8_t const* plaintext, size_t plaintext_len,
-                    uint8_t const *ad, size_t ad_len) {
+                    unsigned char *out, size_t *out_len,
+                    unsigned char const* key, size_t key_len,
+                    unsigned char const* nonce, size_t nonce_len,
+                    unsigned char const* plaintext, size_t plaintext_len,
+                    unsigned char const *ad, size_t ad_len) {
         *out_len = plaintext_len + 16;
 
         /* Do not copy-paste this code; it is missing return-value
@@ -90,11 +90,11 @@ int AES_SIV_Encrypt(AES_SIV_CTX *ctx,
 }
 
 int AES_SIV_Decrypt(AES_SIV_CTX *ctx,
-                    uint8_t *out, size_t *out_len,
-                    uint8_t const* key, size_t key_len,
-                    uint8_t const* nonce, size_t nonce_len,
-                    uint8_t const* ciphertext, size_t ciphertext_len,
-                    uint8_t const *ad, size_t ad_len) {
+                    unsigned char *out, size_t *out_len,
+                    unsigned char const* key, size_t key_len,
+                    unsigned char const* nonce, size_t nonce_len,
+                    unsigned char const* ciphertext, size_t ciphertext_len,
+                    unsigned char const *ad, size_t ad_len) {
         *out_len = ciphertext_len - 16;
 
         /* Do not copy-paste this code; it is missing return-value

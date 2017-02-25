@@ -35,13 +35,13 @@
 #define inline
 #endif
 
-static void debug(const char *label, const uint8_t *hex, size_t len) {
+static void debug(const char *label, const unsigned char *hex, size_t len) {
 #ifdef AES_SIV_DEBUG
         size_t i;
         printf("%16s: ", label);
         for(i=0; i<len;i++) {
                 if(i > 0 && i%16 == 0) printf("\n                  ");
-                printf("%.2"PRIx8, hex[i]);
+                printf("%.2hhx", hex[i]);
                 if(i>0 && i%4 == 3) printf(" ");
 
         }
@@ -53,117 +53,109 @@ static void debug(const char *label, const uint8_t *hex, size_t len) {
 #endif
 }
 
-#if defined(__BYTE_ORDER__) && __BYTE_ORDER__ == __ORDER_BIG_ENDIAN__
-static inline void be64enc(void *buf, uint64_t x) {
-        uint64_t *b = (uint64_t*)buf;
-        *b = x;
+typedef union block_un {
+	uint64_t word[2];
+	unsigned char byte[16];
 }
+#if defined(__GNUC__) || defined(__clang__)
+/* Stricter alignment is not required for correctness but allows
+   the compiler to save one instruction by generating a 128-bit xor */
+	__attribute__((aligned(16)))
+#endif
+	block;
 
-static inline uint64_t be64dec(void const* buf) {
-        uint64_t const* b = (uint64_t const*)buf;
-        return *b;
-}
-#elif defined(__BYTE_ORDER__) && __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
-#if defined(__GNUC__) || defined (__clang__)
-static inline void be64enc(void *buf, uint64_t x) {
-        uint64_t *b = (uint64_t*)buf;
-        *b = __builtin_bswap64(x);
-}
+#if defined(__BYTE_ORDER__) && defined(__ORDER_BIG_ENDIAN__) && \
+	defined(__ORDER_LITTLE_ENDIAN__)
+#define I_AM_BIG_ENDIAN (__BYTE_ORDER__ == __ORDER_BIG_ENDIAN__)
+#define I_AM_LITTLE_ENDIAN (__BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__)
+#elif defined(__i386) || defined(__i386__) || \
+	defined(__x86_64) || defined(__x86_64__) || \
+	defined(_M_IX86) || defined(_M_AMD64)
+#define I_AM_BIG_ENDIAN 0
+#define I_AM_LITTLE_ENDIAN 1
+#else
+#define I_AM_BIG_ENDIAN 0
+#define I_AM_LITTLE_ENDIAN 0
+#endif
 
-static inline uint64_t be64dec(void const* buf) {
-        uint64_t const* b = (uint64_t const*)buf;
-        return __builtin_bswap64(*b);
-}
+#if I_AM_LITTLE_ENDIAN
+#if defined(__GNUC__) || defined(__clang__)
+static inline uint64_t bswap64(uint64_t x) { return __builtin_bswap64(x); }
 #elif defined(_MSC_VER)
-static inline void be64enc(void *buf, uint64_t x) {
-        uint64_t *b = (uint64_t*)buf;
-        *b = _byteswap_uint64(x);
-}
-
-static inline uint64_t be64dec(void const* buf) {
-        uint64_t const* b = (uint64_t const*)buf;
-        return _byteswap_uint64(x);
-}
-#else /* not GCC/Clang, not MSVC */
-static inline uint64_t be64dec(const void *buf) {
-  const uint8_t *b = (const uint8_t*)buf;
-
-  return ((uint64_t)(b[0]) << 56) +
-    ((uint64_t)(b[1]) << 48) +
-    ((uint64_t)(b[2]) << 40) +
-    ((uint64_t)(b[3]) << 32) +
-    ((uint64_t)(b[4]) << 24) +
-    ((uint64_t)(b[5]) << 16) +
-    ((uint64_t)(b[6]) << 8) +
-    (uint64_t)(b[7]);
-}
-
-static inline void be64enc(void *buf, uint64_t x) {
-  uint8_t *b = (uint8_t*)buf;
-  
-  b[0] = (uint8_t)((x >> 56) & 0xff);
-  b[1] = (uint8_t)((x >> 48) & 0xff);
-  b[2] = (uint8_t)((x >> 40) & 0xff);
-  b[3] = (uint8_t)((x >> 32) & 0xff);
-  b[4] = (uint8_t)((x >> 24) & 0xff);
-  b[5] = (uint8_t)((x >> 16) & 0xff);
-  b[6] = (uint8_t)((x >> 8)  & 0xff);
-  b[7] = (uint8_t)x & 0xff;
+static inline uint64_t bswap64(uint64_t x) { return __byteswap_uint64(x); }
+#else
+static inline uint64_t bswap64(uint64_t x) {
+	return  (x << 56) |
+		((x << 40) & UINT64_C(0x00ff000000000000)) |
+		((x << 24) & UINT64_C(0x0000ff0000000000)) |
+		((x << 8)  & UINT64_C(0x000000ff00000000)) |
+		((x >> 8)  & UINT64_C(0x00000000ff000000)) |
+		((x >> 24) & UINT64_C(0x0000000000ff0000)) |
+		((x >> 40) & UINT64_C(0x000000000000ff00)) |
+		(x >> 56);
 }
 #endif
-#else /* weird or unspecified byte order */
-static inline uint64_t be64dec(const void *buf) {
-  const uint8_t *b = (const uint8_t*)buf;
-
-  return ((uint64_t)(b[0]) << 56) +
-    ((uint64_t)(b[1]) << 48) +
-    ((uint64_t)(b[2]) << 40) +
-    ((uint64_t)(b[3]) << 32) +
-    ((uint64_t)(b[4]) << 24) +
-    ((uint64_t)(b[5]) << 16) +
-    ((uint64_t)(b[6]) << 8) +
-    (uint64_t)(b[7]);
-}
-
-static inline void be64enc(void *buf, uint64_t x) {
-  uint8_t *b = (uint8_t*)buf;
-  
-  b[0] = (uint8_t)((x >> 56) & 0xff);
-  b[1] = (uint8_t)((x >> 48) & 0xff);
-  b[2] = (uint8_t)((x >> 40) & 0xff);
-  b[3] = (uint8_t)((x >> 32) & 0xff);
-  b[4] = (uint8_t)((x >> 24) & 0xff);
-  b[5] = (uint8_t)((x >> 16) & 0xff);
-  b[6] = (uint8_t)((x >> 8)  & 0xff);
-  b[7] = (uint8_t)x & 0xff;
-}
 #endif
+
+static inline uint64_t getword(block const* block, size_t i) {
+#if I_AM_BIG_ENDIAN
+	return block->word[i];
+#elif I_AM_LITTLE_ENDIAN
+	return bswap64(block->word[i]);
+#else
+	i <<= 3;
+	return 	((uint64_t)block->byte[i+7]) |
+		((uint64_t)block->byte[i+6] << 8) |
+		((uint64_t)block->byte[i+5] << 16) |
+		((uint64_t)block->byte[i+4] << 24) |
+		((uint64_t)block->byte[i+3] << 32) |
+		((uint64_t)block->byte[i+2] << 40) |
+		((uint64_t)block->byte[i+1] << 48) |
+		((uint64_t)block->byte[i] << 56);
+#endif
+}
+
+static inline void putword(block *block, size_t i, uint64_t x) {
+#if I_AM_BIG_ENDIAN
+	block->word[i] = x;
+#elif I_AM_LITTLE_ENDIAN
+	block->word[i] = bswap64(x);
+#else
+	i <<= 3;
+	block->byte[i] = (unsigned char)(x >> 56);
+	block->byte[i+1] = (unsigned char)((x >> 48) & 0xff);
+	block->byte[i+2] = (unsigned char)((x >> 40) & 0xff);
+	block->byte[i+3] = (unsigned char)((x >> 32) & 0xff);
+	block->byte[i+4] = (unsigned char)((x >> 24) & 0xff);
+	block->byte[i+5] = (unsigned char)((x >> 16) & 0xff);
+	block->byte[i+6] = (unsigned char)((x >> 8) & 0xff);
+	block->byte[i+7] = (unsigned char)(x & 0xff);
+#endif
+}
+static inline void ctrinc(block *block) {
+	putword(block, 1, getword(block, 1) + 1);
+}
+
+static inline void xorblock(block *x, block const* y) {
+	x->word[0] ^= y->word[0];
+	x->word[1] ^= y->word[1];
+}
 
 /* Doubles `block`, which is 16 bytes representing an element
    of GF(2**128) modulo the irreducible polynomial
    x**128 + x**7 + x**2 + x + 1. */
-static inline void dbl(void *block) {
-        uint8_t *b = block;
-        uint64_t high = be64dec(b);
-        uint64_t low = be64dec(b + 8);
-
-        uint64_t high_carry = high & (UINT64_C(1)<<63);
+static inline void dbl(block *block) {
+	uint64_t high = getword(block, 0);
+	uint64_t low = getword(block, 1);
+	uint64_t high_carry = high & (UINT64_C(1)<<63);
         uint64_t low_carry = low & (UINT64_C(1)<<63);
         /* Assumes two's-complement arithmetic */
         int64_t low_mask = -((int64_t)(high_carry>>63)) & 0x87;
         uint64_t high_mask = low_carry >> 63;
-
         high = (high << 1) | high_mask;
         low = (low << 1) ^ (uint64_t)low_mask;
-        be64enc(b, high);
-        be64enc(b + 8, low);
-}
-
-static inline void xorblock(void *out, const void* with) {
-        uint64_t *x = out;
-        const uint64_t *y = with;
-        x[0] ^= y[0];
-        x[1] ^= y[1];
+	putword(block, 0, high);
+	putword(block, 1, low);
 }
 
 struct AES_SIV_CTX_st {
@@ -173,7 +165,7 @@ struct AES_SIV_CTX_st {
         CMAC_CTX *cmac_ctx_init, *cmac_ctx;
 	/* d stores intermediate results of S2V; it corresponds to D from the
 	   pseudocode in section 2.4 of RFC 5297. */
-        uint8_t d[16];
+	block d;
 };
 
 void AES_SIV_CTX_cleanup(AES_SIV_CTX *ctx) {
@@ -211,13 +203,14 @@ int AES_SIV_CTX_copy(AES_SIV_CTX *dst, AES_SIV_CTX const* src) {
         memcpy(&dst->aes_key, &src->aes_key, sizeof src->aes_key);
         if(CMAC_CTX_copy(dst->cmac_ctx_init, src->cmac_ctx_init) != 1) return 0;
         /* Not necessary to copy cmac_ctx since it's just temporary storage */
-        memcpy(dst->d, src->d, sizeof src->d);
+        memcpy(&dst->d, &src->d, sizeof src->d);
         return 1;
 }       
 
-int AES_SIV_Init(AES_SIV_CTX *ctx, uint8_t const* key, size_t key_len) {
-        const static uint8_t zero[] = { 0, 0, 0, 0, 0, 0, 0, 0,
-                                        0, 0, 0, 0, 0, 0, 0, 0 };
+int AES_SIV_Init(AES_SIV_CTX *ctx, unsigned char const* key, size_t key_len) {
+        const static unsigned char zero[]  =
+		{ 0, 0, 0, 0, 0, 0, 0, 0,
+		  0, 0, 0, 0, 0, 0, 0, 0 };
         size_t out_len;
         
         switch(key_len) {
@@ -247,42 +240,42 @@ int AES_SIV_Init(AES_SIV_CTX *ctx, uint8_t const* key, size_t key_len) {
         if(CMAC_CTX_copy(ctx->cmac_ctx, ctx->cmac_ctx_init) != 1) return 0;
         if(CMAC_Update(ctx->cmac_ctx, zero, sizeof zero) != 1) return 0;
         out_len = sizeof ctx->d;
-        if(CMAC_Final(ctx->cmac_ctx, ctx->d, &out_len) != 1) return 0;
-        debug("CMAC(zero)", ctx->d, out_len);
+        if(CMAC_Final(ctx->cmac_ctx, ctx->d.byte, &out_len) != 1) return 0;
+        debug("CMAC(zero)", ctx->d.byte, out_len);
         return 1;
 }
 
-int AES_SIV_AssociateData(AES_SIV_CTX *ctx, const uint8_t *data, size_t len) {
-        uint8_t cmac_out[16];
+int AES_SIV_AssociateData(AES_SIV_CTX *ctx, unsigned char const* data,
+			  size_t len) {
+	block cmac_out;
         size_t out_len = sizeof cmac_out;
 
-        dbl(ctx->d);
-        debug("double()", ctx->d, 16);
+        dbl(&ctx->d);
+        debug("double()", ctx->d.byte, 16);
 
         if(CMAC_CTX_copy(ctx->cmac_ctx, ctx->cmac_ctx_init) != 1) goto fail;
         if(CMAC_Update(ctx->cmac_ctx, data, len) != 1) goto fail;
-        if(CMAC_Final(ctx->cmac_ctx, cmac_out, &out_len) != 1) goto fail;
+        if(CMAC_Final(ctx->cmac_ctx, cmac_out.byte, &out_len) != 1) goto fail;
         assert(out_len == 16);
-        debug("CMAC(ad)", cmac_out, 16);
+        debug("CMAC(ad)", cmac_out.byte, 16);
 
-        xorblock(ctx->d, cmac_out);
-        debug("xor", ctx->d, 16);
-        OPENSSL_cleanse(cmac_out, sizeof cmac_out);
+        xorblock(&ctx->d, &cmac_out);
+        debug("xor", ctx->d.byte, 16);
+        OPENSSL_cleanse(&cmac_out, sizeof cmac_out);
         return 1;
 
 fail:
-        OPENSSL_cleanse(cmac_out, sizeof cmac_out);
+        OPENSSL_cleanse(&cmac_out, sizeof cmac_out);
         return 0;
 }
 
 int AES_SIV_EncryptFinal(AES_SIV_CTX *ctx,
-                         uint8_t *v_out, uint8_t *c_out,
-                         const uint8_t *plaintext, size_t len) {
-        uint8_t t[16], q[16];
+                         unsigned char *v_out, unsigned char *c_out,
+                         unsigned char const* plaintext, size_t len) {
+	block t, q;
         size_t out_len = sizeof q;
-        uint64_t ctr;
 
-#if (SIZE_MAX>>67) > 0
+#if SIZE_MAX > UINT64_C(0xffffffffffffffff)
 	if(len >= ((size_t)1)<<67) goto fail;
 #endif
 
@@ -290,103 +283,102 @@ int AES_SIV_EncryptFinal(AES_SIV_CTX *ctx,
         if(len >= 16) {
                 if(CMAC_Update(ctx->cmac_ctx, plaintext, len-16) != 1) goto fail;
                 debug("xorend part 1", plaintext, len-16);
-                memcpy(t, plaintext + (len-16), 16);
-                xorblock(t, ctx->d);
-                debug("xorend part 2", t, 16);
-                if(CMAC_Update(ctx->cmac_ctx, t, 16) != 1) goto fail;
+                memcpy(&t, plaintext + (len-16), 16);
+                xorblock(&t, &ctx->d);
+                debug("xorend part 2", t.byte, 16);
+                if(CMAC_Update(ctx->cmac_ctx, t.byte, 16) != 1) goto fail;
         } else {
                 size_t i;
-                memcpy(t, plaintext, len);
-                t[len] = 0x80;
-                for(i=len+1; i<16; i++) t[i] = 0;
-                debug("pad", t, 16);
-                dbl(ctx->d);
-                xorblock(t, ctx->d);
-                debug("xor", t, 16);
-                if(CMAC_Update(ctx->cmac_ctx, t, 16) != 1) goto fail;
+                memcpy(&t, plaintext, len);
+                t.byte[len] = 0x80;
+                for(i=len+1; i<16; i++) t.byte[i] = 0;
+                debug("pad", t.byte, 16);
+                dbl(&ctx->d);
+                xorblock(&t, &ctx->d);
+                debug("xor", t.byte, 16);
+                if(CMAC_Update(ctx->cmac_ctx, t.byte, 16) != 1) goto fail;
         }
-        if(CMAC_Final(ctx->cmac_ctx, q, &out_len) != 1) goto fail;
+        if(CMAC_Final(ctx->cmac_ctx, q.byte, &out_len) != 1) goto fail;
         assert(out_len == 16);
-        debug("CMAC(final)", q, 16);
+        debug("CMAC(final)", q.byte, 16);
 
-        memcpy(v_out, q, 16);
-        q[8] &= 0x7f;
-        q[12] &= 0x7f;
+        memcpy(v_out, &q, 16);
+        q.byte[8] &= 0x7f;
+        q.byte[12] &= 0x7f;
 
-        ctr = be64dec(q + 8);
         while(len >= 16) {
-                be64enc(q + 8, ctr);
-                debug("CTR", q, 16);
-                AES_encrypt(q, c_out, &ctx->aes_key);
-                debug("E(K,CTR)", c_out, 16);
-                xorblock(c_out, plaintext);
-                debug("ciphertext", c_out, 16);
-                c_out += 16;
-                plaintext += 16;
-                len -= 16;
-                ctr++;
+		block ctmp, ptmp;
+		memcpy(&ptmp, plaintext, 16);
+		debug("CTR", q.byte, 16);
+		AES_encrypt(q.byte, ctmp.byte, &ctx->aes_key);
+		debug("E(K,CTR)", ctmp.byte, 16);
+		xorblock(&ctmp, &ptmp);
+		memcpy(c_out, &ctmp, 16);
+		c_out += 16;
+		plaintext += 16;
+		len -= 16;
+		ctrinc(&q);
         }
 
-        memcpy(t, plaintext, len);
-        debug("CTR", q, 16);
-        be64enc(q + 8, ctr);
-        AES_encrypt(q, q, &ctx->aes_key);
-        debug("E(K,CTR)", q, 16);
-        xorblock(t, q);
-        debug("ciphertext", t, len);
-        memcpy(c_out, t, len);
-        OPENSSL_cleanse(t, sizeof t);
-        OPENSSL_cleanse(q, sizeof q);
+        memcpy(&t, plaintext, len);
+        debug("CTR", q.byte, 16);
+        AES_encrypt(q.byte, q.byte, &ctx->aes_key);
+        debug("E(K,CTR)", q.byte, 16);
+        xorblock(&t, &q);
+        debug("ciphertext", t.byte, len);
+        memcpy(c_out, &t, len);
+        OPENSSL_cleanse(&t, sizeof t);
+        OPENSSL_cleanse(&q, sizeof q);
         return 1;
 
 fail:
-        OPENSSL_cleanse(t, sizeof t);
-        OPENSSL_cleanse(q, sizeof q);
+        OPENSSL_cleanse(&t, sizeof t);
+        OPENSSL_cleanse(&q, sizeof q);
         return 0;
 }
 
-int AES_SIV_DecryptFinal(AES_SIV_CTX *ctx, uint8_t *out,
-                         uint8_t const* v, uint8_t const *c,
+int AES_SIV_DecryptFinal(AES_SIV_CTX *ctx, unsigned char *out,
+                         unsigned char const* v, unsigned char const *c,
                          size_t len) {
-        uint8_t t[16], q[16];
-        uint8_t *orig_out = out;
+        block t, q;
+        unsigned char *orig_out = out;
         size_t orig_len = len;
         size_t out_len = sizeof q;
-        uint64_t ctr;
+	size_t i;
 	int ret;
 
-#if (SIZE_MAX>>67) > 0
+#if SIZE_MAX > UINT64_C(0xffffffffffffffff)
 	if(len >= ((size_t)1)<<67) goto fail;
 #endif
 	
-        memcpy(q, v, 16);
-        q[8] &= 0x7f;
-        q[12] &= 0x7f;
+        memcpy(&q, v, 16);
+        q.byte[8] &= 0x7f;
+        q.byte[12] &= 0x7f;
         
-        ctr = be64dec(q + 8);
         while(len >= 16) {
-                be64enc(q + 8, ctr);
-                debug("CTR", q, 16);
-                AES_encrypt(q, out, &ctx->aes_key);
-                debug("E(K,CTR)", q, 16);
-                xorblock(out, c);
-                debug("plaintext", out, 16);
+		block ctmp, ptmp;
+		memcpy(&ctmp, c, 16);
+                debug("CTR", q.byte, 16);
+                AES_encrypt(q.byte, ptmp.byte, &ctx->aes_key);
+                debug("E(K,CTR)", ptmp.byte, 16);
+		xorblock(&ptmp, &ctmp);
+                debug("plaintext", ptmp.byte, 16);
+		memcpy(out, &ptmp, 16);
                 out += 16;
                 c += 16;
                 len -= 16;
-                ctr++;
+                ctrinc(&q);
         }
 
-        memcpy(t, c, len);
-        be64enc(q + 8, ctr);
-        debug("CTR", q, 16);
-        AES_encrypt(q, q, &ctx->aes_key);
-        debug("E(K,CTR)", q, 16);
-        xorblock(t, q);
-        debug("plaintext", t, len);
-        memcpy(out, t, len);
-        OPENSSL_cleanse(t, sizeof t);
-        OPENSSL_cleanse(q, sizeof q);
+        memcpy(&t, c, len);
+        debug("CTR", q.byte, 16);
+        AES_encrypt(q.byte, q.byte, &ctx->aes_key);
+        debug("E(K,CTR)", q.byte, 16);
+        xorblock(&t, &q);
+        debug("plaintext", t.byte, len);
+        memcpy(out, &t, len);
+        OPENSSL_cleanse(&t, sizeof t);
+        OPENSSL_cleanse(&q, sizeof q);
 
         len = orig_len;
         out = orig_out;
@@ -395,43 +387,42 @@ int AES_SIV_DecryptFinal(AES_SIV_CTX *ctx, uint8_t *out,
                 debug("xorend part 1", out, len-16);
                 if(CMAC_Update(ctx->cmac_ctx, out, len-16)
                    != 1) return 0;
-                memcpy(t, out + (len-16), 16);
-                xorblock(t, ctx->d);
-                debug("xorend part 2", t, 16);
-                if(CMAC_Update(ctx->cmac_ctx, t, 16) != 1) goto fail;
+                memcpy(&t, out + (len-16), 16);
+                xorblock(&t, &ctx->d);
+                debug("xorend part 2", t.byte, 16);
+                if(CMAC_Update(ctx->cmac_ctx, t.byte, 16) != 1) goto fail;
         } else {
-                size_t i;
-                memcpy(t, out, len);
-                t[len] = 0x80;
-                for(i=len+1; i<16; i++) t[i] = 0;
-                debug("pad", t, 16);
-                dbl(ctx->d);
-                xorblock(t, ctx->d);
-                debug("xor", t, 16);
-                if(CMAC_Update(ctx->cmac_ctx, t, 16) != 1) goto fail;
+                memcpy(&t, out, len);
+                t.byte[len] = 0x80;
+                for(i=len+1; i<16; i++) t.byte[i] = 0;
+                debug("pad", t.byte, 16);
+                dbl(&ctx->d);
+                xorblock(&t, &ctx->d);
+                debug("xor", t.byte, 16);
+                if(CMAC_Update(ctx->cmac_ctx, t.byte, 16) != 1) goto fail;
         }
         
-        if(CMAC_Final(ctx->cmac_ctx, t, &out_len) != 1) goto fail;
-        debug("CMAC(final)", t, 16);
+        if(CMAC_Final(ctx->cmac_ctx, t.byte, &out_len) != 1) goto fail;
+        debug("CMAC(final)", t.byte, 16);
         assert(out_len == 16);
 
-        xorblock(t, v);
-        ret = (be64dec(t) | be64dec(t + 8)) == 0;
-	OPENSSL_cleanse(t, sizeof t);
-	OPENSSL_cleanse(q, sizeof q);
+	for(i=0; i<16; i++) t.byte[i] ^= v[i];
+	ret = (t.word[0] | t.word[1]) == UINT64_C(0);
+	OPENSSL_cleanse(&t, sizeof t);
+	OPENSSL_cleanse(&q, sizeof q);
 	return ret;
 fail:
-	OPENSSL_cleanse(t, sizeof t);
-	OPENSSL_cleanse(q, sizeof q);
+	OPENSSL_cleanse(&t, sizeof t);
+	OPENSSL_cleanse(&q, sizeof q);
 	return 0;
 }
         
 int AES_SIV_Encrypt(AES_SIV_CTX *ctx,
-                    uint8_t *out, size_t *out_len,
-                    uint8_t const* key, size_t key_len,
-                    uint8_t const* nonce, size_t nonce_len,
-                    uint8_t const* plaintext, size_t plaintext_len,
-                    uint8_t const *ad, size_t ad_len) {
+                    unsigned char *out, size_t *out_len,
+                    unsigned char const* key, size_t key_len,
+                    unsigned char const* nonce, size_t nonce_len,
+                    unsigned char const* plaintext, size_t plaintext_len,
+                    unsigned char const *ad, size_t ad_len) {
         if(*out_len < plaintext_len + 16) return 0;
         *out_len = plaintext_len + 16;
         
@@ -447,11 +438,11 @@ int AES_SIV_Encrypt(AES_SIV_CTX *ctx,
 }
 
 int AES_SIV_Decrypt(AES_SIV_CTX *ctx,
-                    uint8_t *out, size_t *out_len,
-                    uint8_t const* key, size_t key_len,
-                    uint8_t const* nonce, size_t nonce_len,
-                    uint8_t const* ciphertext, size_t ciphertext_len,
-                    uint8_t const *ad, size_t ad_len) {
+                    unsigned char *out, size_t *out_len,
+                    unsigned char const* key, size_t key_len,
+                    unsigned char const* nonce, size_t nonce_len,
+                    unsigned char const* ciphertext, size_t ciphertext_len,
+                    unsigned char const *ad, size_t ad_len) {
         if(ciphertext_len < 16) return 0;
         if(*out_len < ciphertext_len - 16) return 0;
         *out_len = ciphertext_len - 16;
