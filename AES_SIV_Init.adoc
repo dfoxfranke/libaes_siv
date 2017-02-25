@@ -18,7 +18,7 @@ int AES_SIV_Init(AES_SIV_CTX *ctx, unsigned char const* key, size_t key_len);
 int AES_SIV_AssociateData(AES_SIV_CTX *ctx, unsigned char const* data, size_t len);
 int AES_SIV_EncryptFinal(AES_SIV_CTX *ctx,
                          unsigned char *v_out, unsigned char *c_out,
-                         const unsigned char *plaintext, size_t len);
+                         unsigned char const* plaintext, size_t len);
 int AES_SIV_DecryptFinal(AES_SIV_CTX *ctx, unsigned char *out,
                          unsigned char const* v, unsigned char const *c,
                          size_t len);
