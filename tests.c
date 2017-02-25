@@ -1,3 +1,4 @@
+#undef NDEBUG
 #include "aes_siv.h"
 
 #include <assert.h>

@@ -22,7 +22,8 @@ at the end of `aes_siv.c` for simple usage examples.
 
 Build dependencies:
 
-* Any ANSI C compiler (GCC or Clang recommended)
-* POSIX make
-* OpenSSL >=1.0.2 (libcrypto only)
+* Any ANSI C compiler (GCC or Clang recommended). No C99 language
+  features are required, however <inttypes.h> must be available.
+* CMake >= 3.0
+* OpenSSL >=1.0.1 (libcrypto only)
 * Asciidoc (for building man pages)
