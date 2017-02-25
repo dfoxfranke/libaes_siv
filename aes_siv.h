@@ -6,7 +6,6 @@
 #define AES_SIV_H_
 
 #include <stddef.h>
-#include <stdint.h>
 
 typedef struct AES_SIV_CTX_st AES_SIV_CTX;
 
