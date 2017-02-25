@@ -56,13 +56,7 @@ static void debug(const char *label, const unsigned char *hex, size_t len) {
 typedef union block_un {
 	uint64_t word[2];
 	unsigned char byte[16];
-}
-#if defined(__GNUC__) || defined(__clang__)
-/* Stricter alignment is not required for correctness but allows
-   the compiler to save one instruction by generating a 128-bit xor */
-	__attribute__((aligned(16)))
-#endif
-	block;
+} block;
 
 const union {
   uint32_t word;
