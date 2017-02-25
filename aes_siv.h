@@ -20,7 +20,7 @@ int AES_SIV_EncryptFinal(AES_SIV_CTX *ctx,
                          unsigned char *v_out, unsigned char *c_out,
                          unsigned char const* plaintext, size_t len);
 int AES_SIV_DecryptFinal(AES_SIV_CTX *ctx, unsigned char *out,
-                         unsigned char const* v, unsigned char const *c,
+                         unsigned char const* v, unsigned char const* c,
                          size_t len);
 
 
