@@ -5,5 +5,10 @@
 *.gcda
 *.gcno
 *.gcov
-aes-siv-test
+runtests
 libaes_siv.a
+CMakeCache.txt
+CMakeFiles/
+*.cmake
+Makefile
+install_manifest.txt
