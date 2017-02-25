@@ -29,13 +29,13 @@ int AES_SIV_Encrypt(AES_SIV_CTX *ctx,
                     unsigned char const* key, size_t key_len,
                     unsigned char const* nonce, size_t nonce_len,
                     unsigned char const* plaintext, size_t plaintext_len,
-                    unsigned char const *ad, size_t ad_len);
+                    unsigned char const* ad, size_t ad_len);
 
 int AES_SIV_Decrypt(AES_SIV_CTX *ctx,
                     unsigned char *out, size_t *out_len,
                     unsigned char const* key, size_t key_len,
                     unsigned char const* nonce, size_t nonce_len,
                     unsigned char const* ciphertext, size_t ciphertext_len,
-                    unsigned char const *ad, size_t ad_len);
+                    unsigned char const* ad, size_t ad_len);
 
 #endif
