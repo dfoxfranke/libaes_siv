@@ -64,45 +64,40 @@ typedef union block_un {
 #endif
 	block;
 
-#if defined(__BYTE_ORDER__) && defined(__ORDER_BIG_ENDIAN__) && \
-	defined(__ORDER_LITTLE_ENDIAN__)
-#define I_AM_BIG_ENDIAN (__BYTE_ORDER__ == __ORDER_BIG_ENDIAN__)
-#define I_AM_LITTLE_ENDIAN (__BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__)
-#elif defined(__i386) || defined(__i386__) || \
-	defined(__x86_64) || defined(__x86_64__) || \
-	defined(_M_IX86) || defined(_M_AMD64)
-#define I_AM_BIG_ENDIAN 0
-#define I_AM_LITTLE_ENDIAN 1
-#else
-#define I_AM_BIG_ENDIAN 0
-#define I_AM_LITTLE_ENDIAN 0
-#endif
+const union {
+  uint32_t word;
+  char byte;
+} endian = { 0x01020304 };
 
-#if I_AM_LITTLE_ENDIAN
 #if defined(__GNUC__) || defined(__clang__)
 static inline uint64_t bswap64(uint64_t x) { return __builtin_bswap64(x); }
 #elif defined(_MSC_VER)
 static inline uint64_t bswap64(uint64_t x) { return __byteswap_uint64(x); }
 #else
-static inline uint64_t bswap64(uint64_t x) {
-	return  (x << 56) |
-		((x << 40) & UINT64_C(0x00ff000000000000)) |
-		((x << 24) & UINT64_C(0x0000ff0000000000)) |
-		((x << 8)  & UINT64_C(0x000000ff00000000)) |
-		((x >> 8)  & UINT64_C(0x00000000ff000000)) |
-		((x >> 24) & UINT64_C(0x0000000000ff0000)) |
-		((x >> 40) & UINT64_C(0x000000000000ff00)) |
-		(x >> 56);
+
+static inline uint32_t rotl(uint32_t x) {
+	return (x<<8) | (x>>24);
 }
-#endif
+static inline uint32_t rotr(uint32_t x) {
+	return (x>>8) | (x<<24);
+}
+
+static inline uint64_t bswap64(uint64_t x) {
+	uint32_t high = (uint32_t)(x>>32);
+	uint32_t low = (uint32_t)x;
+
+	high = (rotl(high) & 0x00ff00ff) | (rotr(high) & 0xff00ff00);
+	low = (rotl(low) & 0x00ff00ff) | (rotr(low) & 0xff00ff00);
+	return ((uint64_t)low)<<32 | (uint64_t)high;
+}
 #endif
 
 static inline uint64_t getword(block const* block, size_t i) {
-#if I_AM_BIG_ENDIAN
+  if(endian.byte == 0x01) {
 	return block->word[i];
-#elif I_AM_LITTLE_ENDIAN
-	return bswap64(block->word[i]);
-#else
+  } else if(endian.byte == 0x04) {
+    	return bswap64(block->word[i]);
+  } else {
 	i <<= 3;
 	return 	((uint64_t)block->byte[i+7]) |
 		((uint64_t)block->byte[i+6] << 8) |
@@ -112,15 +107,15 @@ static inline uint64_t getword(block const* block, size_t i) {
 		((uint64_t)block->byte[i+2] << 40) |
 		((uint64_t)block->byte[i+1] << 48) |
 		((uint64_t)block->byte[i] << 56);
-#endif
+  }
 }
 
 static inline void putword(block *block, size_t i, uint64_t x) {
-#if I_AM_BIG_ENDIAN
+  if(endian.byte == 0x01) {
 	block->word[i] = x;
-#elif I_AM_LITTLE_ENDIAN
+  } else if(endian.byte == 0x04) {
 	block->word[i] = bswap64(x);
-#else
+  } else {
 	i <<= 3;
 	block->byte[i] = (unsigned char)(x >> 56);
 	block->byte[i+1] = (unsigned char)((x >> 48) & 0xff);
@@ -130,8 +125,9 @@ static inline void putword(block *block, size_t i, uint64_t x) {
 	block->byte[i+5] = (unsigned char)((x >> 16) & 0xff);
 	block->byte[i+6] = (unsigned char)((x >> 8) & 0xff);
 	block->byte[i+7] = (unsigned char)(x & 0xff);
-#endif
+  }
 }
+
 static inline void ctrinc(block *block) {
 	putword(block, 1, getword(block, 1) + 1);
 }
