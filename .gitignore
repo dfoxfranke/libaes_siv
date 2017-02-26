@@ -6,6 +6,7 @@
 *.gcno
 *.gcov
 runtests
+test-ct
 libaes_siv.a
 CMakeCache.txt
 CMakeFiles/
