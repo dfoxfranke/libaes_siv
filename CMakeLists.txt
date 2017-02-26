@@ -36,6 +36,12 @@ if("${CMAKE_BUILD_TYPE}" STREQUAL "Coverage")
 target_link_libraries(runtests "--coverage")
 endif("${CMAKE_BUILD_TYPE}" STREQUAL "Coverage")
 
+add_executable(test-ct aes_siv.c test-ct.c)
+target_link_libraries(test-ct ${OPENSSL_CRYPTO_LIBRARY})
+if("${CMAKE_BUILD_TYPE}" STREQUAL "Coverage")
+target_link_libraries(test-ct "--coverage")
+endif("${CMAKE_BUILD_TYPE}" STREQUAL "Coverage")
+
 install(TARGETS aes_siv ARCHIVE DESTINATION lib LIBRARY DESTINATION lib)
 install(FILES aes_siv.h DESTINATION include)
 
