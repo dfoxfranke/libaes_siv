@@ -316,10 +316,69 @@ static void test_512bit() {
 	AES_SIV_CTX_free(ctx);
 }
 
+static void test_bad_key() {
+	const unsigned char key[40];
+	const unsigned char ad[16];
+	const unsigned char plaintext[16];
+	
+	unsigned char ciphertext_out[256];
+	size_t ciphertext_len = sizeof ciphertext_out;
+
+	AES_SIV_CTX *ctx;
+	int ret;
+	
+	printf("Test bad key size: ");
+	
+	ctx = AES_SIV_CTX_new();
+	assert(ctx != NULL);
+	
+	ret = AES_SIV_Encrypt(ctx, ciphertext_out, &ciphertext_len,
+			      key, sizeof key, NULL, 0,
+			      plaintext, sizeof plaintext,
+			      ad, sizeof ad);
+	assert(ret == 0);
+
+	ret = AES_SIV_Init(ctx, key, sizeof key);
+	assert(ret == 0);
+
+	AES_SIV_CTX_cleanup(ctx);
+	AES_SIV_CTX_free(ctx);
+	printf("OK\n");
+}
+
+static void test_decrypt_failure() {
+	const unsigned char key[32];
+	const unsigned char ad[16];
+	const unsigned char ciphertext[32];
+	
+	unsigned char plaintext_out[256];
+	size_t plaintext_len = sizeof plaintext_out;
+
+	AES_SIV_CTX *ctx;
+	int ret;
+
+	printf("Test decryption failure:\n");
+
+	ctx = AES_SIV_CTX_new();
+	assert(ctx != NULL);
+	
+	ret = AES_SIV_Decrypt(ctx, plaintext_out, &plaintext_len,
+			      key, sizeof key, NULL, 0,
+			      ciphertext, sizeof ciphertext,
+			      ad, sizeof ad);
+	assert(ret == 0);
+
+	AES_SIV_CTX_cleanup(ctx);
+	AES_SIV_CTX_free(ctx);
+}	
+  
+
 int main() {
         test_vector_1();
         test_vector_2();
 	test_384bit();
 	test_512bit();
+	test_bad_key();
+	test_decrypt_failure();
         return 0;
 }
