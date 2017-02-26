@@ -1,3 +1,7 @@
+/* Copyright (c) 2017 Akamai Technologies, Inc.
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
 #undef NDEBUG
 #include "aes_siv.h"
 
@@ -317,9 +321,9 @@ static void test_512bit() {
 }
 
 static void test_bad_key() {
-	const unsigned char key[40];
-	const unsigned char ad[16];
-	const unsigned char plaintext[16];
+	static const unsigned char key[40];
+	static const unsigned char ad[16];
+	static const unsigned char plaintext[16];
 	
 	unsigned char ciphertext_out[256];
 	size_t ciphertext_len = sizeof ciphertext_out;
@@ -347,9 +351,9 @@ static void test_bad_key() {
 }
 
 static void test_decrypt_failure() {
-	const unsigned char key[32];
-	const unsigned char ad[16];
-	const unsigned char ciphertext[32];
+	static const unsigned char key[32];
+	static const unsigned char ad[16];
+	static const unsigned char ciphertext[32];
 	
 	unsigned char plaintext_out[256];
 	size_t plaintext_len = sizeof plaintext_out;
