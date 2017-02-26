@@ -40,9 +40,13 @@ static void debug(const char *label, const unsigned char *hex, size_t len) {
         size_t i;
         printf("%16s: ", label);
         for(i=0; i<len;i++) {
-                if(i > 0 && i%16 == 0) printf("\n                  ");
+                if(i > 0 && i%16 == 0) {
+			printf("\n                  ");
+		}
                 printf("%.2hhx", hex[i]);
-                if(i>0 && i%4 == 3) printf(" ");
+                if(i>0 && i%4 == 3) {
+			printf(" ");
+		}
 
         }
         printf("\n");
@@ -175,7 +179,9 @@ void AES_SIV_CTX_free(AES_SIV_CTX *ctx) {
 
 AES_SIV_CTX* AES_SIV_CTX_new() {
         AES_SIV_CTX *ctx = OPENSSL_malloc(sizeof (struct AES_SIV_CTX_st));
-        if(ctx == NULL) return NULL;
+        if(ctx == NULL) {
+		return NULL;
+	}
 
         ctx->cmac_ctx_init = CMAC_CTX_new();
         ctx->cmac_ctx = CMAC_CTX_new();
@@ -205,32 +211,47 @@ int AES_SIV_Init(AES_SIV_CTX *ctx, unsigned char const* key, size_t key_len) {
         
         switch(key_len) {
         case 32:
-                if(CMAC_Init(ctx->cmac_ctx_init, key, 16, EVP_aes_128_cbc(), NULL)
-                   != 1) return 0;
-                if(AES_set_encrypt_key(key + 16, 128, &ctx->aes_key)
-                   != 0) return 0;
+                if(CMAC_Init(ctx->cmac_ctx_init, key, 16,
+			     EVP_aes_128_cbc(), NULL) != 1) {
+			return 0;
+		}
+                if(AES_set_encrypt_key(key + 16, 128, &ctx->aes_key) != 0) {
+			return 0;
+		}
                 break;
         case 48:
-                if(CMAC_Init(ctx->cmac_ctx_init, key, 24, EVP_aes_192_cbc(), NULL)
-                   != 1) return 0;
-                if(AES_set_encrypt_key(key + 24, 192, &ctx->aes_key)
-                   != 0) return 0;
+                if(CMAC_Init(ctx->cmac_ctx_init, key, 24,
+			     EVP_aes_192_cbc(), NULL) != 1) {
+			return 0;
+		}
+                if(AES_set_encrypt_key(key + 24, 192, &ctx->aes_key) != 0) {
+			return 0;
+		}
 
                 break;
         case 64:
-                if(CMAC_Init(ctx->cmac_ctx_init, key, 32, EVP_aes_256_cbc(), NULL)
-                   != 1) return 0;
-                if(AES_set_encrypt_key(key + 32, 256, &ctx->aes_key)
-                   != 0) return 0;
+                if(CMAC_Init(ctx->cmac_ctx_init, key, 32,
+			     EVP_aes_256_cbc(), NULL) != 1) {
+			return 0;
+		}
+                if(AES_set_encrypt_key(key + 32, 256, &ctx->aes_key) != 0) {
+			return 0;
+		}
                 break;
         default:
                 return 0;
         }
 
-        if(CMAC_CTX_copy(ctx->cmac_ctx, ctx->cmac_ctx_init) != 1) return 0;
-        if(CMAC_Update(ctx->cmac_ctx, zero, sizeof zero) != 1) return 0;
+        if(CMAC_CTX_copy(ctx->cmac_ctx, ctx->cmac_ctx_init) != 1) {
+		return 0;
+	}
+        if(CMAC_Update(ctx->cmac_ctx, zero, sizeof zero) != 1) {
+		return 0;
+	}
         out_len = sizeof ctx->d;
-        if(CMAC_Final(ctx->cmac_ctx, ctx->d.byte, &out_len) != 1) return 0;
+        if(CMAC_Final(ctx->cmac_ctx, ctx->d.byte, &out_len) != 1) {
+		return 0;
+	}
         debug("CMAC(zero)", ctx->d.byte, out_len);
         return 1;
 }
@@ -243,9 +264,15 @@ int AES_SIV_AssociateData(AES_SIV_CTX *ctx, unsigned char const* data,
         dbl(&ctx->d);
         debug("double()", ctx->d.byte, 16);
 
-        if(CMAC_CTX_copy(ctx->cmac_ctx, ctx->cmac_ctx_init) != 1) goto fail;
-        if(CMAC_Update(ctx->cmac_ctx, data, len) != 1) goto fail;
-        if(CMAC_Final(ctx->cmac_ctx, cmac_out.byte, &out_len) != 1) goto fail;
+        if(CMAC_CTX_copy(ctx->cmac_ctx, ctx->cmac_ctx_init) != 1) {
+		goto fail;
+	}
+        if(CMAC_Update(ctx->cmac_ctx, data, len) != 1) {
+		goto fail;
+	}
+        if(CMAC_Final(ctx->cmac_ctx, cmac_out.byte, &out_len) != 1) {
+		goto fail;
+	}
         assert(out_len == 16);
         debug("CMAC(ad)", cmac_out.byte, 16);
 
@@ -266,17 +293,25 @@ int AES_SIV_EncryptFinal(AES_SIV_CTX *ctx,
         size_t out_len = sizeof q;
 
 #if SIZE_MAX > UINT64_C(0xffffffffffffffff)
-	if(len >= ((size_t)1)<<67) goto fail;
+	if(len >= ((size_t)1)<<67) {
+		goto fail;
+	}
 #endif
 
-        if(CMAC_CTX_copy(ctx->cmac_ctx, ctx->cmac_ctx_init) != 1) goto fail;
+        if(CMAC_CTX_copy(ctx->cmac_ctx, ctx->cmac_ctx_init) != 1) {
+		goto fail;
+	}
         if(len >= 16) {
-                if(CMAC_Update(ctx->cmac_ctx, plaintext, len-16) != 1) goto fail;
+                if(CMAC_Update(ctx->cmac_ctx, plaintext, len-16) != 1) {
+			goto fail;
+		}
                 debug("xorend part 1", plaintext, len-16);
                 memcpy(&t, plaintext + (len-16), 16);
                 xorblock(&t, &ctx->d);
                 debug("xorend part 2", t.byte, 16);
-                if(CMAC_Update(ctx->cmac_ctx, t.byte, 16) != 1) goto fail;
+                if(CMAC_Update(ctx->cmac_ctx, t.byte, 16) != 1) {
+			goto fail;
+		}
         } else {
                 size_t i;
                 memcpy(&t, plaintext, len);
@@ -286,9 +321,13 @@ int AES_SIV_EncryptFinal(AES_SIV_CTX *ctx,
                 dbl(&ctx->d);
                 xorblock(&t, &ctx->d);
                 debug("xor", t.byte, 16);
-                if(CMAC_Update(ctx->cmac_ctx, t.byte, 16) != 1) goto fail;
+                if(CMAC_Update(ctx->cmac_ctx, t.byte, 16) != 1) {
+			goto fail;
+		}
         }
-        if(CMAC_Final(ctx->cmac_ctx, q.byte, &out_len) != 1) goto fail;
+        if(CMAC_Final(ctx->cmac_ctx, q.byte, &out_len) != 1) {
+		goto fail;
+	}
         assert(out_len == 16);
         debug("CMAC(final)", q.byte, 16);
 
@@ -376,15 +415,20 @@ int AES_SIV_DecryptFinal(AES_SIV_CTX *ctx, unsigned char *out,
 
         len = orig_len;
         out = orig_out;
-        if(CMAC_CTX_copy(ctx->cmac_ctx, ctx->cmac_ctx_init) != 1) goto fail;
+        if(CMAC_CTX_copy(ctx->cmac_ctx, ctx->cmac_ctx_init) != 1) {
+		goto fail;
+	}
         if(len >= 16) {
                 debug("xorend part 1", out, len-16);
-                if(CMAC_Update(ctx->cmac_ctx, out, len-16)
-                   != 1) return 0;
+                if(CMAC_Update(ctx->cmac_ctx, out, len-16) != 1) {
+			goto fail;
+		}
                 memcpy(&t, out + (len-16), 16);
                 xorblock(&t, &ctx->d);
                 debug("xorend part 2", t.byte, 16);
-                if(CMAC_Update(ctx->cmac_ctx, t.byte, 16) != 1) goto fail;
+                if(CMAC_Update(ctx->cmac_ctx, t.byte, 16) != 1) {
+			goto fail;
+		}
         } else {
                 memcpy(&t, out, len);
                 t.byte[len] = 0x80;
@@ -393,10 +437,14 @@ int AES_SIV_DecryptFinal(AES_SIV_CTX *ctx, unsigned char *out,
                 dbl(&ctx->d);
                 xorblock(&t, &ctx->d);
                 debug("xor", t.byte, 16);
-                if(CMAC_Update(ctx->cmac_ctx, t.byte, 16) != 1) goto fail;
+                if(CMAC_Update(ctx->cmac_ctx, t.byte, 16) != 1) {
+			goto fail;
+		}
         }
         
-        if(CMAC_Final(ctx->cmac_ctx, t.byte, &out_len) != 1) goto fail;
+        if(CMAC_Final(ctx->cmac_ctx, t.byte, &out_len) != 1) {
+		goto fail;
+	}
         debug("CMAC(final)", t.byte, 16);
         assert(out_len == 16);
 
@@ -421,15 +469,25 @@ int AES_SIV_Encrypt(AES_SIV_CTX *ctx,
                     unsigned char const* nonce, size_t nonce_len,
                     unsigned char const* plaintext, size_t plaintext_len,
                     unsigned char const *ad, size_t ad_len) {
-        if(*out_len < plaintext_len + 16) return 0;
+        if(*out_len < plaintext_len + 16) {
+		return 0;
+	}
         *out_len = plaintext_len + 16;
         
-        if(AES_SIV_Init(ctx, key, key_len) != 1) return 0;
-        if(AES_SIV_AssociateData(ctx, ad, ad_len) != 1) return 0;
+        if(AES_SIV_Init(ctx, key, key_len) != 1) {
+		return 0;
+	}
+        if(AES_SIV_AssociateData(ctx, ad, ad_len) != 1) {
+		return 0;
+	}
         if(nonce != NULL &&
-           AES_SIV_AssociateData(ctx, nonce, nonce_len) != 1) return 0;
+           AES_SIV_AssociateData(ctx, nonce, nonce_len) != 1) {
+		return 0;
+	}
         if(AES_SIV_EncryptFinal(ctx, out, out+16, plaintext, plaintext_len)
-           != 1) return 0;
+           != 1) {
+		return 0;
+	}
         debug("IV || C", out, *out_len);
 
         return 1;
@@ -441,17 +499,28 @@ int AES_SIV_Decrypt(AES_SIV_CTX *ctx,
                     unsigned char const* nonce, size_t nonce_len,
                     unsigned char const* ciphertext, size_t ciphertext_len,
                     unsigned char const *ad, size_t ad_len) {
-        if(ciphertext_len < 16) return 0;
-        if(*out_len < ciphertext_len - 16) return 0;
+        if(ciphertext_len < 16) {
+		return 0;
+	}
+        if(*out_len < ciphertext_len - 16) {
+		return 0;
+	}
         *out_len = ciphertext_len - 16;
 
-        if(AES_SIV_Init(ctx, key, key_len) != 1) return 0;
-        if(AES_SIV_AssociateData(ctx, ad, ad_len) != 1) return 0;
+        if(AES_SIV_Init(ctx, key, key_len) != 1) {
+		return 0;
+	}
+        if(AES_SIV_AssociateData(ctx, ad, ad_len) != 1) {
+		return 0;
+	}
         if(nonce != NULL &&
-           AES_SIV_AssociateData(ctx, nonce, nonce_len) != 1) return 0;
+           AES_SIV_AssociateData(ctx, nonce, nonce_len) != 1) {
+		return 0;
+	}
         if(AES_SIV_DecryptFinal(ctx, out, ciphertext,
-                                ciphertext + 16, ciphertext_len - 16)
-           != 1) return 0;
+                                ciphertext + 16, ciphertext_len - 16) != 1) {
+		return 0;
+	}
         debug("plaintext", out, *out_len);
         return 1;
 }
