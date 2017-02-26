@@ -35,6 +35,14 @@
 #define inline
 #endif
 
+#if defined(__GNUC__) || defined(__clang__)
+#define LIKELY(cond) __builtin_expect(cond, 1)
+#define UNLIKELY(cond) __builtin_expect(cond, 0)
+#else
+#define LIKELY(cond) cond
+#define UNLIKELY(cond) cond
+#endif
+
 static void debug(const char *label, const unsigned char *hex, size_t len) {
 #ifdef AES_SIV_DEBUG
         size_t i;
@@ -187,15 +195,15 @@ void AES_SIV_CTX_free(AES_SIV_CTX *ctx) {
 
 AES_SIV_CTX* AES_SIV_CTX_new() {
         AES_SIV_CTX *ctx = OPENSSL_malloc(sizeof (struct AES_SIV_CTX_st));
-        if(ctx == NULL) {
+        if(UNLIKELY(ctx == NULL)) {
 		return NULL;
 	}
 
         ctx->cmac_ctx_init = CMAC_CTX_new();
         ctx->cmac_ctx = CMAC_CTX_new();
 
-        if(ctx->cmac_ctx_init == NULL ||
-           ctx->cmac_ctx == NULL) {
+        if(UNLIKELY(ctx->cmac_ctx_init == NULL ||
+		    ctx->cmac_ctx == NULL)) {
                 AES_SIV_CTX_free(ctx);
                 return NULL;
         }
@@ -219,30 +227,33 @@ int AES_SIV_Init(AES_SIV_CTX *ctx, unsigned char const* key, size_t key_len) {
         
         switch(key_len) {
         case 32:
-                if(CMAC_Init(ctx->cmac_ctx_init, key, 16,
-			     EVP_aes_128_cbc(), NULL) != 1) {
+                if(UNLIKELY(CMAC_Init(ctx->cmac_ctx_init, key, 16,
+				      EVP_aes_128_cbc(), NULL) != 1)) {
 			return 0;
 		}
-                if(AES_set_encrypt_key(key + 16, 128, &ctx->aes_key) != 0) {
+                if(UNLIKELY(AES_set_encrypt_key(key + 16, 128,
+						&ctx->aes_key) != 0)) {
 			return 0;
 		}
                 break;
         case 48:
-                if(CMAC_Init(ctx->cmac_ctx_init, key, 24,
-			     EVP_aes_192_cbc(), NULL) != 1) {
+                if(UNLIKELY(CMAC_Init(ctx->cmac_ctx_init, key, 24,
+				      EVP_aes_192_cbc(), NULL) != 1)) {
 			return 0;
 		}
-                if(AES_set_encrypt_key(key + 24, 192, &ctx->aes_key) != 0) {
+                if(UNLIKELY(AES_set_encrypt_key(key + 24, 192,
+						&ctx->aes_key) != 0)) {
 			return 0;
 		}
 
                 break;
         case 64:
-                if(CMAC_Init(ctx->cmac_ctx_init, key, 32,
-			     EVP_aes_256_cbc(), NULL) != 1) {
+                if(UNLIKELY(CMAC_Init(ctx->cmac_ctx_init, key, 32,
+				      EVP_aes_256_cbc(), NULL) != 1)) {
 			return 0;
 		}
-                if(AES_set_encrypt_key(key + 32, 256, &ctx->aes_key) != 0) {
+                if(UNLIKELY(AES_set_encrypt_key(key + 32, 256,
+						&ctx->aes_key) != 0)) {
 			return 0;
 		}
                 break;
@@ -250,14 +261,14 @@ int AES_SIV_Init(AES_SIV_CTX *ctx, unsigned char const* key, size_t key_len) {
                 return 0;
         }
 
-        if(CMAC_CTX_copy(ctx->cmac_ctx, ctx->cmac_ctx_init) != 1) {
+        if(UNLIKELY(CMAC_CTX_copy(ctx->cmac_ctx, ctx->cmac_ctx_init) != 1)) {
 		return 0;
 	}
-        if(CMAC_Update(ctx->cmac_ctx, zero, sizeof zero) != 1) {
+        if(UNLIKELY(CMAC_Update(ctx->cmac_ctx, zero, sizeof zero) != 1)) {
 		return 0;
 	}
         out_len = sizeof ctx->d;
-        if(CMAC_Final(ctx->cmac_ctx, ctx->d.byte, &out_len) != 1) {
+        if(UNLIKELY(CMAC_Final(ctx->cmac_ctx, ctx->d.byte, &out_len) != 1)) {
 		return 0;
 	}
         debug("CMAC(zero)", ctx->d.byte, out_len);
@@ -273,13 +284,13 @@ int AES_SIV_AssociateData(AES_SIV_CTX *ctx, unsigned char const* data,
         dbl(&ctx->d);
         debug("double()", ctx->d.byte, 16);
 
-        if(CMAC_CTX_copy(ctx->cmac_ctx, ctx->cmac_ctx_init) != 1) {
+        if(UNLIKELY(CMAC_CTX_copy(ctx->cmac_ctx, ctx->cmac_ctx_init) != 1)) {
 		goto done;
 	}
-        if(CMAC_Update(ctx->cmac_ctx, data, len) != 1) {
+        if(UNLIKELY(CMAC_Update(ctx->cmac_ctx, data, len) != 1)) {
 		goto done;
 	}
-        if(CMAC_Final(ctx->cmac_ctx, cmac_out.byte, &out_len) != 1) {
+        if(UNLIKELY(CMAC_Final(ctx->cmac_ctx, cmac_out.byte, &out_len) != 1)) {
 		goto done;
 	}
         assert(out_len == 16);
@@ -303,23 +314,24 @@ int AES_SIV_EncryptFinal(AES_SIV_CTX *ctx,
 	int ret = 0;
 
 #if SIZE_MAX > UINT64_C(0xffffffffffffffff)
-	if(len >= ((size_t)1)<<67) {
+	if(UNLIKELY(len >= ((size_t)1)<<67)) {
 		goto done;
 	}
 #endif
 
-        if(CMAC_CTX_copy(ctx->cmac_ctx, ctx->cmac_ctx_init) != 1) {
+        if(UNLIKELY(CMAC_CTX_copy(ctx->cmac_ctx, ctx->cmac_ctx_init) != 1)) {
 		goto done;
 	}
         if(len >= 16) {
-                if(CMAC_Update(ctx->cmac_ctx, plaintext, len-16) != 1) {
+                if(UNLIKELY(CMAC_Update(ctx->cmac_ctx, plaintext,
+					len-16) != 1)) {
 			goto done;
 		}
                 debug("xorend part 1", plaintext, len-16);
                 memcpy(&t, plaintext + (len-16), 16);
                 xorblock(&t, &ctx->d);
                 debug("xorend part 2", t.byte, 16);
-                if(CMAC_Update(ctx->cmac_ctx, t.byte, 16) != 1) {
+                if(UNLIKELY(CMAC_Update(ctx->cmac_ctx, t.byte, 16) != 1)) {
 			goto done;
 		}
         } else {
@@ -331,11 +343,11 @@ int AES_SIV_EncryptFinal(AES_SIV_CTX *ctx,
                 dbl(&ctx->d);
                 xorblock(&t, &ctx->d);
                 debug("xor", t.byte, 16);
-                if(CMAC_Update(ctx->cmac_ctx, t.byte, 16) != 1) {
+                if(UNLIKELY(CMAC_Update(ctx->cmac_ctx, t.byte, 16) != 1)) {
 			goto done;
 		}
         }
-        if(CMAC_Final(ctx->cmac_ctx, q.byte, &out_len) != 1) {
+        if(UNLIKELY(CMAC_Final(ctx->cmac_ctx, q.byte, &out_len) != 1)) {
 		goto done;
 	}
         assert(out_len == 16);
@@ -388,7 +400,7 @@ int AES_SIV_DecryptFinal(AES_SIV_CTX *ctx, unsigned char *out,
 	int ret = 0;
 
 #if SIZE_MAX > UINT64_C(0xffffffffffffffff)
-	if(len >= ((size_t)1)<<67) goto done;
+	if(UNLIKELY(len >= ((size_t)1)<<67)) goto done;
 #endif
 	
         memcpy(&q, v, 16);
@@ -421,18 +433,18 @@ int AES_SIV_DecryptFinal(AES_SIV_CTX *ctx, unsigned char *out,
 
         len = orig_len;
         out = orig_out;
-        if(CMAC_CTX_copy(ctx->cmac_ctx, ctx->cmac_ctx_init) != 1) {
+        if(UNLIKELY(CMAC_CTX_copy(ctx->cmac_ctx, ctx->cmac_ctx_init) != 1)) {
 		goto done;
 	}
         if(len >= 16) {
                 debug("xorend part 1", out, len-16);
-                if(CMAC_Update(ctx->cmac_ctx, out, len-16) != 1) {
+                if(UNLIKELY(CMAC_Update(ctx->cmac_ctx, out, len-16) != 1)) {
 			goto done;
 		}
                 memcpy(&t, out + (len-16), 16);
                 xorblock(&t, &ctx->d);
                 debug("xorend part 2", t.byte, 16);
-                if(CMAC_Update(ctx->cmac_ctx, t.byte, 16) != 1) {
+                if(UNLIKELY(CMAC_Update(ctx->cmac_ctx, t.byte, 16) != 1)) {
 			goto done;
 		}
         } else {
@@ -443,12 +455,12 @@ int AES_SIV_DecryptFinal(AES_SIV_CTX *ctx, unsigned char *out,
                 dbl(&ctx->d);
                 xorblock(&t, &ctx->d);
                 debug("xor", t.byte, 16);
-                if(CMAC_Update(ctx->cmac_ctx, t.byte, 16) != 1) {
+                if(UNLIKELY(CMAC_Update(ctx->cmac_ctx, t.byte, 16) != 1)) {
 			goto done;
 		}
         }
         
-        if(CMAC_Final(ctx->cmac_ctx, t.byte, &out_len) != 1) {
+        if(UNLIKELY(CMAC_Final(ctx->cmac_ctx, t.byte, &out_len) != 1)) {
 		goto done;
 	}
         debug("CMAC(final)", t.byte, 16);
@@ -470,23 +482,24 @@ int AES_SIV_Encrypt(AES_SIV_CTX *ctx,
                     unsigned char const* nonce, size_t nonce_len,
                     unsigned char const* plaintext, size_t plaintext_len,
                     unsigned char const *ad, size_t ad_len) {
-        if(*out_len < plaintext_len + 16) {
+        if(UNLIKELY(*out_len < plaintext_len + 16)) {
 		return 0;
 	}
         *out_len = plaintext_len + 16;
         
-        if(AES_SIV_Init(ctx, key, key_len) != 1) {
+        if(UNLIKELY(AES_SIV_Init(ctx, key, key_len) != 1)) {
 		return 0;
 	}
-        if(AES_SIV_AssociateData(ctx, ad, ad_len) != 1) {
+        if(UNLIKELY(AES_SIV_AssociateData(ctx, ad, ad_len) != 1)) {
 		return 0;
 	}
         if(nonce != NULL &&
-           AES_SIV_AssociateData(ctx, nonce, nonce_len) != 1) {
+           UNLIKELY(AES_SIV_AssociateData(ctx, nonce, nonce_len) != 1)) {
 		return 0;
 	}
-        if(AES_SIV_EncryptFinal(ctx, out, out+16, plaintext, plaintext_len)
-           != 1) {
+        if(UNLIKELY(AES_SIV_EncryptFinal(ctx, out, out+16,
+					 plaintext, plaintext_len)
+		    != 1)) {
 		return 0;
 	}
         debug("IV || C", out, *out_len);
@@ -500,29 +513,29 @@ int AES_SIV_Decrypt(AES_SIV_CTX *ctx,
                     unsigned char const* nonce, size_t nonce_len,
                     unsigned char const* ciphertext, size_t ciphertext_len,
                     unsigned char const *ad, size_t ad_len) {
-        if(ciphertext_len < 16) {
+        if(UNLIKELY(ciphertext_len < 16)) {
 		return 0;
 	}
-        if(*out_len < ciphertext_len - 16) {
+        if(UNLIKELY(*out_len < ciphertext_len - 16)) {
 		return 0;
 	}
         *out_len = ciphertext_len - 16;
 
-        if(AES_SIV_Init(ctx, key, key_len) != 1) {
+        if(UNLIKELY(AES_SIV_Init(ctx, key, key_len) != 1)) {
 		return 0;
 	}
-        if(AES_SIV_AssociateData(ctx, ad, ad_len) != 1) {
+        if(UNLIKELY(AES_SIV_AssociateData(ctx, ad, ad_len) != 1)) {
 		return 0;
 	}
         if(nonce != NULL &&
-           AES_SIV_AssociateData(ctx, nonce, nonce_len) != 1) {
+           UNLIKELY(AES_SIV_AssociateData(ctx, nonce, nonce_len) != 1)) {
 		return 0;
 	}
-        if(AES_SIV_DecryptFinal(ctx, out, ciphertext,
-                                ciphertext + 16, ciphertext_len - 16) != 1) {
+        if(UNLIKELY(AES_SIV_DecryptFinal(ctx, out, ciphertext, ciphertext + 16,
+					 ciphertext_len - 16)
+		    != 1)) {
 		return 0;
 	}
         debug("plaintext", out, *out_len);
         return 1;
 }
-
