@@ -8,6 +8,8 @@
 runtests
 test-ct
 libaes_siv.a
+libaes_siv.so
+libaes_siv.so.1
 CMakeCache.txt
 CMakeFiles/
 *.cmake

@@ -26,8 +26,13 @@ find_program(A2X a2x)
 
 configure_file(config.h.in config.h)
 
-add_library(aes_siv aes_siv.c)
+add_library(aes_siv SHARED aes_siv.c)
 target_link_libraries(aes_siv ${OPENSSL_CRYPTO_LIBRARY})
+set_target_properties(aes_siv PROPERTIES SOVERSION 1)
+
+add_library(aes_siv_static STATIC aes_siv.c)
+target_link_libraries(aes_siv_static ${OPENSSL_CRYPTO_LIBRARY})
+set_target_properties(aes_siv_static PROPERTIES OUTPUT_NAME aes_siv)
 
 add_executable(runtests aes_siv_test.c tests.c)
 target_link_libraries(runtests ${OPENSSL_CRYPTO_LIBRARY})
@@ -43,7 +48,8 @@ if(ENABLE_SANITIZER)
   target_link_libraries(runtests "-fsanitize=${ENABLE_SANITIZER}")
 endif(ENABLE_SANITIZER)
 
-install(TARGETS aes_siv ARCHIVE DESTINATION lib LIBRARY DESTINATION lib)
+install(TARGETS aes_siv LIBRARY DESTINATION lib)
+install(TARGETS aes_siv_static ARCHIVE DESTINATION lib)
 install(FILES aes_siv.h DESTINATION include)
 
 if(A2X)
