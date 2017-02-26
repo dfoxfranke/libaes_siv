@@ -320,6 +320,79 @@ static void test_512bit() {
 	AES_SIV_CTX_free(ctx);
 }
 
+static void test_copy() {
+	const unsigned char key[] = {
+                0xff, 0xfe, 0xfd, 0xfc, 0xfb, 0xfa, 0xf9, 0xf8,
+                0xf7, 0xf6, 0xf5, 0xf4, 0xf3, 0xf2, 0xf1, 0xf0,
+                0xf0, 0xf1, 0xf2, 0xf3, 0xf4, 0xf5, 0xf6, 0xf7,
+                0xf8, 0xf9, 0xfa, 0xfb, 0xfc, 0xfd, 0xfe, 0xff
+        };
+
+        const unsigned char ad[] = {
+                0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17,
+                0x18, 0x19, 0x1a, 0x1b, 0x1c, 0x1d, 0x1e, 0x1f,
+                0x20, 0x21, 0x22, 0x23, 0x24, 0x25, 0x26, 0x27
+        };
+
+        const unsigned char plaintext1[] = {
+                0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77,0x88,
+                0x99, 0xaa, 0xbb, 0xcc, 0xdd, 0xee
+        };
+
+	const unsigned char plaintext2[] = {
+                0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77,0x88,
+                0x99, 0xaa, 0xbb, 0xcc, 0xdd, 0xef
+        };
+
+        const unsigned char ciphertext[] = {
+                0x85, 0x63, 0x2d, 0x07, 0xc6, 0xe8, 0xf3, 0x7f,
+                0x95, 0x0a, 0xcd, 0x32, 0x0a, 0x2e, 0xcc, 0x93,
+                0x40, 0xc0, 0x2b, 0x96, 0x90, 0xc4, 0xdc, 0x04,
+                0xda, 0xef, 0x7f, 0x6a, 0xfe, 0x5c
+        };
+
+	unsigned char ciphertext1_out[256], ciphertext2_out[256];
+
+        AES_SIV_CTX *ctx1, *ctx2, *ctx3;
+        int ret;
+
+	ctx1 = AES_SIV_CTX_new();
+	assert(ctx1 != NULL);
+	ctx2 = AES_SIV_CTX_new();
+	assert(ctx2 != NULL);
+	ctx3 = AES_SIV_CTX_new();
+	assert(ctx3 != NULL);
+	
+
+	ret = AES_SIV_Init(ctx1, key, sizeof key);
+	assert(ret == 1);
+	ret = AES_SIV_CTX_copy(ctx2, ctx1);
+	assert(ret == 1);
+
+	ret = AES_SIV_AssociateData(ctx1, ad, sizeof ad);
+	assert(ret == 1);
+	ret = AES_SIV_AssociateData(ctx2, ad, sizeof ad);
+	assert(ret == 1);	
+
+	ret = AES_SIV_CTX_copy(ctx3, ctx1);
+	assert(ret == 1);
+	
+	ret = AES_SIV_EncryptFinal(ctx1, ciphertext1_out, ciphertext1_out + 16,
+                                   plaintext1, sizeof plaintext1);
+	assert(ret == 1);
+	assert(!memcmp(ciphertext, ciphertext1_out, sizeof ciphertext));
+
+	ret = AES_SIV_EncryptFinal(ctx2, ciphertext2_out, ciphertext2_out + 16,
+                                   plaintext1, sizeof plaintext1);
+	assert(ret == 1);
+	assert(!memcmp(ciphertext, ciphertext2_out, sizeof ciphertext));
+	
+	ret = AES_SIV_EncryptFinal(ctx3, ciphertext2_out, ciphertext2_out + 16,
+                                   plaintext2, sizeof plaintext2);
+	assert(ret == 1);
+	assert(memcmp(ciphertext, ciphertext2_out, sizeof ciphertext));
+}
+
 static void test_bad_key() {
 	static const unsigned char key[40];
 	static const unsigned char ad[16];
@@ -382,6 +455,7 @@ int main() {
         test_vector_2();
 	test_384bit();
 	test_512bit();
+	test_copy();
 	test_bad_key();
 	test_decrypt_failure();
         return 0;
