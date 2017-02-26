@@ -310,13 +310,15 @@ int AES_SIV_EncryptFinal(AES_SIV_CTX *ctx,
 		ctrinc(&q);
         }
 
-        memcpy(&t, plaintext, len);
-        debug("CTR", q.byte, 16);
-        AES_encrypt(q.byte, q.byte, &ctx->aes_key);
-        debug("E(K,CTR)", q.byte, 16);
-        xorblock(&t, &q);
-        debug("ciphertext", t.byte, len);
-        memcpy(c_out, &t, len);
+	if(len > 0) {
+		memcpy(&t, plaintext, len);
+		debug("CTR", q.byte, 16);
+		AES_encrypt(q.byte, q.byte, &ctx->aes_key);
+		debug("E(K,CTR)", q.byte, 16);
+		xorblock(&t, &q);
+		debug("ciphertext", t.byte, len);
+		memcpy(c_out, &t, len);
+	}
         OPENSSL_cleanse(&t, sizeof t);
         OPENSSL_cleanse(&q, sizeof q);
         return 1;
@@ -360,15 +362,15 @@ int AES_SIV_DecryptFinal(AES_SIV_CTX *ctx, unsigned char *out,
                 ctrinc(&q);
         }
 
-        memcpy(&t, c, len);
-        debug("CTR", q.byte, 16);
-        AES_encrypt(q.byte, q.byte, &ctx->aes_key);
-        debug("E(K,CTR)", q.byte, 16);
-        xorblock(&t, &q);
-        debug("plaintext", t.byte, len);
-        memcpy(out, &t, len);
-        OPENSSL_cleanse(&t, sizeof t);
-        OPENSSL_cleanse(&q, sizeof q);
+	if(len > 0) {
+		memcpy(&t, c, len);
+		debug("CTR", q.byte, 16);
+		AES_encrypt(q.byte, q.byte, &ctx->aes_key);
+		debug("E(K,CTR)", q.byte, 16);
+		xorblock(&t, &q);
+		debug("plaintext", t.byte, len);
+		memcpy(out, &t, len);
+	}
 
         len = orig_len;
         out = orig_out;
