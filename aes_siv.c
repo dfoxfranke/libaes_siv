@@ -87,39 +87,39 @@ static inline uint64_t bswap64(uint64_t x) {
 #endif
 
 static inline uint64_t getword(block const* block, size_t i) {
-  if(endian.byte == 0x01) {
-	return block->word[i];
-  } else if(endian.byte == 0x04) {
-    	return bswap64(block->word[i]);
-  } else {
-	i <<= 3;
-	return 	((uint64_t)block->byte[i+7]) |
-		((uint64_t)block->byte[i+6] << 8) |
-		((uint64_t)block->byte[i+5] << 16) |
-		((uint64_t)block->byte[i+4] << 24) |
-		((uint64_t)block->byte[i+3] << 32) |
-		((uint64_t)block->byte[i+2] << 40) |
-		((uint64_t)block->byte[i+1] << 48) |
-		((uint64_t)block->byte[i] << 56);
-  }
+	if(endian.byte == 0x01) {
+		return block->word[i];
+	} else if(endian.byte == 0x04) {
+		return bswap64(block->word[i]);
+	} else {
+		i <<= 3;
+		return 	((uint64_t)block->byte[i+7]) |
+			((uint64_t)block->byte[i+6] << 8) |
+			((uint64_t)block->byte[i+5] << 16) |
+			((uint64_t)block->byte[i+4] << 24) |
+			((uint64_t)block->byte[i+3] << 32) |
+			((uint64_t)block->byte[i+2] << 40) |
+			((uint64_t)block->byte[i+1] << 48) |
+			((uint64_t)block->byte[i] << 56);
+	}
 }
 
 static inline void putword(block *block, size_t i, uint64_t x) {
-  if(endian.byte == 0x01) {
-	block->word[i] = x;
-  } else if(endian.byte == 0x04) {
-	block->word[i] = bswap64(x);
-  } else {
-	i <<= 3;
-	block->byte[i] = (unsigned char)(x >> 56);
-	block->byte[i+1] = (unsigned char)((x >> 48) & 0xff);
-	block->byte[i+2] = (unsigned char)((x >> 40) & 0xff);
-	block->byte[i+3] = (unsigned char)((x >> 32) & 0xff);
-	block->byte[i+4] = (unsigned char)((x >> 24) & 0xff);
-	block->byte[i+5] = (unsigned char)((x >> 16) & 0xff);
-	block->byte[i+6] = (unsigned char)((x >> 8) & 0xff);
-	block->byte[i+7] = (unsigned char)(x & 0xff);
-  }
+	if(endian.byte == 0x01) {
+		block->word[i] = x;
+	} else if(endian.byte == 0x04) {
+		block->word[i] = bswap64(x);
+	} else {
+		i <<= 3;
+		block->byte[i] = (unsigned char)(x >> 56);
+		block->byte[i+1] = (unsigned char)((x >> 48) & 0xff);
+		block->byte[i+2] = (unsigned char)((x >> 40) & 0xff);
+		block->byte[i+3] = (unsigned char)((x >> 32) & 0xff);
+		block->byte[i+4] = (unsigned char)((x >> 24) & 0xff);
+		block->byte[i+5] = (unsigned char)((x >> 16) & 0xff);
+		block->byte[i+6] = (unsigned char)((x >> 8) & 0xff);
+		block->byte[i+7] = (unsigned char)(x & 0xff);
+	}
 }
 
 static inline void ctrinc(block *block) {
