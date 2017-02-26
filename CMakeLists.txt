@@ -5,6 +5,8 @@ if("${CMAKE_BUILD_TYPE}" STREQUAL "")
 set(CMAKE_BUILD_TYPE Release)
 endif("${CMAKE_BUILD_TYPE}" STREQUAL "")
 
+# Warning: don't use the UB sanitizer in production builds. It can introduce timing side-channels
+# into otherwise constant-time code.
 if("${CMAKE_C_COMPILER_ID}" STREQUAL "GNU")
 set(CMAKE_C_FLAGS_DEBUG "-Wall -Wconversion -Og -ggdb3 -ftree-vectorize -fsanitize=undefined")
 set(CMAKE_C_FLAGS_RELEASE "-Wall -Wconversion -O3 -fomit-frame-pointer -funroll-loops -ftree-vectorize -DNDEBUG")
