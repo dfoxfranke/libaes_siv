@@ -17,6 +17,10 @@
 #include <openssl/crypto.h>
 #include <openssl/evp.h>
 
+#ifdef ENABLE_CTGRIND
+#include <ctgrind.h>
+#endif
+
 #if CHAR_BIT != 8
 #error "libaes_siv requires an 8-bit char type"
 #endif
@@ -41,6 +45,17 @@
 #else
 #define LIKELY(cond) cond
 #define UNLIKELY(cond) cond
+#endif
+
+#ifndef ENABLE_CTGRIND
+static inline void ct_poison(const void *data, size_t len) {
+        (void)data;
+        (void)len;
+}
+static inline void ct_unpoison(const void *data, size_t len) {
+        (void)data;
+        (void)len;
+}
 #endif
 
 static void debug(const char *label, const unsigned char *hex, size_t len) {
@@ -219,6 +234,8 @@ int AES_SIV_Init(AES_SIV_CTX *ctx, unsigned char const *key, size_t key_len) {
                                              0, 0, 0, 0, 0, 0, 0, 0};
         size_t out_len;
 
+        ct_poison(key, sizeof key);
+
         switch (key_len) {
         case 32:
                 if (UNLIKELY(CMAC_Init(ctx->cmac_ctx_init, key, 16,
@@ -274,6 +291,8 @@ int AES_SIV_AssociateData(AES_SIV_CTX *ctx, unsigned char const *data,
         block cmac_out;
         size_t out_len = sizeof cmac_out;
 
+        ct_poison(data, len);
+
         dbl(&ctx->d);
         debug("double()", ctx->d.byte, 16);
 
@@ -299,6 +318,8 @@ int AES_SIV_EncryptFinal(AES_SIV_CTX *ctx, unsigned char *v_out,
                          size_t len) {
         block t, q, ctmp, ptmp;
         size_t out_len = sizeof q;
+
+        ct_poison(plaintext, len);
 
 #if SIZE_MAX > UINT64_C(0xffffffffffffffff)
         if (UNLIKELY(len >= ((size_t)1) << 67)) {
@@ -379,6 +400,10 @@ int AES_SIV_DecryptFinal(AES_SIV_CTX *ctx, unsigned char *out,
         size_t orig_len = len;
         size_t out_len = sizeof q;
         size_t i;
+        uint64_t result;
+
+        ct_poison(v, 16);
+        ct_poison(c, len);
 
 #if SIZE_MAX > UINT64_C(0xffffffffffffffff)
         if (UNLIKELY(len >= ((size_t)1) << 67))
@@ -451,7 +476,12 @@ int AES_SIV_DecryptFinal(AES_SIV_CTX *ctx, unsigned char *out,
 
         for (i = 0; i < 16; i++)
                 t.byte[i] ^= v[i];
-        if((t.word[0] | t.word[1]) == UINT64_C(0)) {
+
+        result = t.word[0] | t.word[1];
+        ct_unpoison(&result, sizeof result);
+
+        if(result == UINT64_C(0)) {
+                ct_unpoison(out, orig_len);
                 return 1;
         } else {
                 OPENSSL_cleanse(out, orig_len);
@@ -464,6 +494,11 @@ int AES_SIV_Encrypt(AES_SIV_CTX *ctx, unsigned char *out, size_t *out_len,
                     unsigned char const *nonce, size_t nonce_len,
                     unsigned char const *plaintext, size_t plaintext_len,
                     unsigned char const *ad, size_t ad_len) {
+        ct_poison(key, key_len);
+        ct_poison(nonce, nonce_len);
+        ct_poison(plaintext, plaintext_len);
+        ct_poison(ad, ad_len);
+        
         if (UNLIKELY(*out_len < plaintext_len + 16)) {
                 return 0;
         }
@@ -483,6 +518,8 @@ int AES_SIV_Encrypt(AES_SIV_CTX *ctx, unsigned char *out, size_t *out_len,
                                           plaintext_len) != 1)) {
                 return 0;
         }
+
+        ct_unpoison(out, *out_len);
         debug("IV || C", out, *out_len);
 
         return 1;
@@ -493,6 +530,11 @@ int AES_SIV_Decrypt(AES_SIV_CTX *ctx, unsigned char *out, size_t *out_len,
                     unsigned char const *nonce, size_t nonce_len,
                     unsigned char const *ciphertext, size_t ciphertext_len,
                     unsigned char const *ad, size_t ad_len) {
+        ct_poison(key, key_len);
+        ct_poison(nonce, nonce_len);
+        ct_poison(ciphertext, ciphertext_len);
+        ct_poison(ad, ad_len);
+        
         if (UNLIKELY(ciphertext_len < 16)) {
                 return 0;
         }
@@ -515,6 +557,7 @@ int AES_SIV_Decrypt(AES_SIV_CTX *ctx, unsigned char *out, size_t *out_len,
                                           ciphertext_len - 16) != 1)) {
                 return 0;
         }
+        ct_unpoison(out, *out_len);
         debug("plaintext", out, *out_len);
         return 1;
 }
