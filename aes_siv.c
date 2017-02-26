@@ -262,7 +262,7 @@ fail:
 int AES_SIV_EncryptFinal(AES_SIV_CTX *ctx,
                          unsigned char *v_out, unsigned char *c_out,
                          unsigned char const* plaintext, size_t len) {
-	block t, q;
+	block t, q, ctmp, ptmp;
         size_t out_len = sizeof q;
 
 #if SIZE_MAX > UINT64_C(0xffffffffffffffff)
@@ -297,7 +297,6 @@ int AES_SIV_EncryptFinal(AES_SIV_CTX *ctx,
         q.byte[12] &= 0x7f;
 
         while(len >= 16) {
-		block ctmp, ptmp;
 		memcpy(&ptmp, plaintext, 16);
 		debug("CTR", q.byte, 16);
 		AES_encrypt(q.byte, ctmp.byte, &ctx->aes_key);
@@ -321,18 +320,22 @@ int AES_SIV_EncryptFinal(AES_SIV_CTX *ctx,
 	}
         OPENSSL_cleanse(&t, sizeof t);
         OPENSSL_cleanse(&q, sizeof q);
+ 	OPENSSL_cleanse(&ctmp, sizeof ctmp);
+	OPENSSL_cleanse(&ptmp, sizeof ptmp);
         return 1;
 
 fail:
         OPENSSL_cleanse(&t, sizeof t);
         OPENSSL_cleanse(&q, sizeof q);
+	OPENSSL_cleanse(&ctmp, sizeof ctmp);
+	OPENSSL_cleanse(&ptmp, sizeof ptmp);
         return 0;
 }
 
 int AES_SIV_DecryptFinal(AES_SIV_CTX *ctx, unsigned char *out,
                          unsigned char const* v, unsigned char const *c,
                          size_t len) {
-        block t, q;
+        block t, q, ctmp, ptmp;
         unsigned char *orig_out = out;
         size_t orig_len = len;
         size_t out_len = sizeof q;
@@ -348,7 +351,6 @@ int AES_SIV_DecryptFinal(AES_SIV_CTX *ctx, unsigned char *out,
         q.byte[12] &= 0x7f;
         
         while(len >= 16) {
-		block ctmp, ptmp;
 		memcpy(&ctmp, c, 16);
                 debug("CTR", q.byte, 16);
                 AES_encrypt(q.byte, ptmp.byte, &ctx->aes_key);
@@ -402,10 +404,14 @@ int AES_SIV_DecryptFinal(AES_SIV_CTX *ctx, unsigned char *out,
 	ret = (t.word[0] | t.word[1]) == UINT64_C(0);
 	OPENSSL_cleanse(&t, sizeof t);
 	OPENSSL_cleanse(&q, sizeof q);
+	OPENSSL_cleanse(&ctmp, sizeof ctmp);
+	OPENSSL_cleanse(&ptmp, sizeof ptmp);
 	return ret;
 fail:
 	OPENSSL_cleanse(&t, sizeof t);
 	OPENSSL_cleanse(&q, sizeof q);
+	OPENSSL_cleanse(&ctmp, sizeof ctmp);
+	OPENSSL_cleanse(&ptmp, sizeof ptmp);
 	return 0;
 }
         
