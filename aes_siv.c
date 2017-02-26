@@ -91,11 +91,13 @@ static inline uint64_t bswap64(uint64_t x) {
 #endif
 
 static inline uint64_t getword(block const* block, size_t i) {
+#ifndef AES_SIV_DEBUG_WEIRD_ENDIAN
 	if(endian.byte == 0x01) {
 		return block->word[i];
 	} else if(endian.byte == 0x04) {
 		return bswap64(block->word[i]);
 	} else {
+#endif
 		i <<= 3;
 		return 	((uint64_t)block->byte[i+7]) |
 			((uint64_t)block->byte[i+6] << 8) |
@@ -105,15 +107,19 @@ static inline uint64_t getword(block const* block, size_t i) {
 			((uint64_t)block->byte[i+2] << 40) |
 			((uint64_t)block->byte[i+1] << 48) |
 			((uint64_t)block->byte[i] << 56);
+#ifndef AES_SIV_DEBUG_WEIRD_ENDIAN
 	}
+#endif
 }
 
 static inline void putword(block *block, size_t i, uint64_t x) {
+#ifndef AES_SIV_DEBUG_WEIRD_ENDIAN
 	if(endian.byte == 0x01) {
 		block->word[i] = x;
 	} else if(endian.byte == 0x04) {
 		block->word[i] = bswap64(x);
 	} else {
+#endif
 		i <<= 3;
 		block->byte[i] = (unsigned char)(x >> 56);
 		block->byte[i+1] = (unsigned char)((x >> 48) & 0xff);
@@ -123,7 +129,9 @@ static inline void putword(block *block, size_t i, uint64_t x) {
 		block->byte[i+5] = (unsigned char)((x >> 16) & 0xff);
 		block->byte[i+6] = (unsigned char)((x >> 8) & 0xff);
 		block->byte[i+7] = (unsigned char)(x & 0xff);
+#ifndef AES_SIV_DEBUG_WEIRD_ENDIAN
 	}
+#endif
 }
 
 static inline void ctrinc(block *block) {
