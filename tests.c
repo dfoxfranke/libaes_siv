@@ -320,6 +320,70 @@ static void test_512bit() {
 	AES_SIV_CTX_free(ctx);
 }
 
+static void test_highlevel_with_nonce() {
+	const unsigned char key[] = {
+                0xff, 0xfe, 0xfd, 0xfc, 0xfb, 0xfa, 0xf9, 0xf8,
+                0xf7, 0xf6, 0xf5, 0xf4, 0xf3, 0xf2, 0xf1, 0xf0,
+                0xf0, 0xf1, 0xf2, 0xf3, 0xf4, 0xf5, 0xf6, 0xf7,
+                0xf8, 0xf9, 0xfa, 0xfb, 0xfc, 0xfd, 0xfe, 0xff
+        };
+
+        const unsigned char ad[] = {
+                0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17,
+                0x18, 0x19, 0x1a, 0x1b, 0x1c, 0x1d, 0x1e, 0x1f,
+                0x20, 0x21, 0x22, 0x23, 0x24, 0x25, 0x26, 0x27
+        };
+
+	const unsigned char nonce[] = {
+                0x09, 0xf9, 0x11, 0x02, 0x9d, 0x74, 0xe3, 0x5b,
+                0xd8, 0x41, 0x56, 0xc5, 0x63, 0x56, 0x88, 0xc0
+	};
+		
+
+        const unsigned char plaintext[] = {
+                0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77,0x88,
+                0x99, 0xaa, 0xbb, 0xcc, 0xdd, 0xee
+        };
+
+        unsigned char ciphertext_out[256];
+        unsigned char plaintext_out[256];
+        
+        size_t plaintext_len = sizeof plaintext_out;
+        size_t ciphertext_len = sizeof ciphertext_out;
+
+        AES_SIV_CTX *ctx;
+        int ret;
+
+        printf("Test high-level interface with non-NULL nonce:\n");
+        debug("key", key, sizeof key);
+        debug("AD", ad, sizeof ad);
+	debug("nonce", nonce, sizeof nonce);
+        debug("plaintext", plaintext, sizeof plaintext);
+
+        ctx = AES_SIV_CTX_new();
+        assert(ctx != NULL);
+        
+        printf("Encryption:\n");
+        ret = AES_SIV_Encrypt(ctx, ciphertext_out, &ciphertext_len,
+                              key, sizeof key,
+			      nonce, sizeof nonce,
+                              plaintext, sizeof plaintext,
+                              ad, sizeof ad);
+        assert(ret == 1);
+
+        printf("Decryption:\n");
+        ret = AES_SIV_Decrypt(ctx, plaintext_out, &plaintext_len,
+                              key, sizeof key,
+			      nonce, sizeof nonce,
+                              ciphertext_out, ciphertext_len,
+                              ad, sizeof ad);
+        assert(ret == 1);
+        assert(plaintext_len == sizeof plaintext);
+	assert(!memcmp(plaintext, plaintext_out, plaintext_len));
+	AES_SIV_CTX_cleanup(ctx);
+	AES_SIV_CTX_free(ctx);
+}
+
 static void test_copy() {
 	const unsigned char key[] = {
                 0xff, 0xfe, 0xfd, 0xfc, 0xfb, 0xfa, 0xf9, 0xf8,
@@ -455,6 +519,7 @@ int main() {
         test_vector_2();
 	test_384bit();
 	test_512bit();
+	test_highlevel_with_nonce();
 	test_copy();
 	test_bad_key();
 	test_decrypt_failure();
