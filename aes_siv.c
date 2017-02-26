@@ -89,9 +89,9 @@ typedef union block_un {
 } block;
 
 const union {
-        uint32_t word;
-        char byte;
-} endian = {0x01020304};
+        uint64_t word;
+        char byte[8];
+} endian = {0x0102030405060708};
 
 #if defined(__GNUC__) || defined(__clang__)
 static inline uint64_t bswap64(uint64_t x) { return __builtin_bswap64(x); }
@@ -113,10 +113,30 @@ static inline uint64_t bswap64(uint64_t x) {
 #endif
 
 static inline uint64_t getword(block const *block, size_t i) {
+	const int little_endian =
+		endian.byte[0] == 8 &&
+		endian.byte[1] == 7 &&
+		endian.byte[2] == 6 &&
+		endian.byte[3] == 5 &&
+		endian.byte[4] == 4 &&
+		endian.byte[5] == 3 &&
+		endian.byte[6] == 2 &&
+		endian.byte[7] == 1;
+
+	const int big_endian =
+		endian.byte[0] == 1 &&
+		endian.byte[1] == 2 &&
+		endian.byte[2] == 3 &&
+		endian.byte[3] == 4 &&
+		endian.byte[4] == 5 &&
+		endian.byte[5] == 6 &&
+		endian.byte[6] == 7 &&
+		endian.byte[7] == 8;
+
 #ifndef ENABLE_FORCE_WEIRD_ENDIAN
-        if (endian.byte == 0x01) {
+        if (big_endian) {
                 return block->word[i];
-        } else if (endian.byte == 0x04) {
+        } else if (little_endian) {
                 return bswap64(block->word[i]);
         } else {
 #endif
@@ -135,10 +155,30 @@ static inline uint64_t getword(block const *block, size_t i) {
 }
 
 static inline void putword(block *block, size_t i, uint64_t x) {
+	const int little_endian =
+	endian.byte[0] == 8 &&
+	endian.byte[1] == 7 &&
+	endian.byte[2] == 6 &&
+	endian.byte[3] == 5 &&
+	endian.byte[4] == 4 &&
+	endian.byte[5] == 3 &&
+	endian.byte[6] == 2 &&
+	endian.byte[7] == 1;
+
+const int big_endian =
+	endian.byte[0] == 1 &&
+	endian.byte[1] == 2 &&
+	endian.byte[2] == 3 &&
+	endian.byte[3] == 4 &&
+	endian.byte[4] == 5 &&
+	endian.byte[5] == 6 &&
+	endian.byte[6] == 7 &&
+	endian.byte[7] == 8;
+
 #ifndef ENABLE_FORCE_WEIRD_ENDIAN
-        if (endian.byte == 0x01) {
+        if (big_endian) {
                 block->word[i] = x;
-        } else if (endian.byte == 0x04) {
+        } else if (little_endian) {
                 block->word[i] = bswap64(x);
         } else {
 #endif
