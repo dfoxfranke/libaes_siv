@@ -1,13 +1,14 @@
 /* Copyright (c) 2017 Akamai Technologies, Inc.
  * SPDX-License-Identifier: Apache-2.0
  */
+#include "config.h"
 #include "aes_siv.h"
 
 #include <assert.h>
 #include <inttypes.h>
 #include <stddef.h>
 #include <stdint.h>
-#ifdef AES_SIV_DEBUG
+#ifdef ENABLE_DEBUG_OUTPUT
 #include <stdio.h>
 #endif
 #include <string.h>
@@ -25,7 +26,7 @@
 #error "libaes_siv requires an 8-bit char type"
 #endif
 
-#if - 1 != ~0
+#if -1 != ~0
 #error "libaes_siv requires a two's-complement architecture"
 #endif
 
@@ -59,7 +60,10 @@ static inline void ct_unpoison(const void *data, size_t len) {
 #endif
 
 static void debug(const char *label, const unsigned char *hex, size_t len) {
-#ifdef AES_SIV_DEBUG
+/* ENABLE_CTGRIND has to override ENABLE_DEBUG_OUTPUT since sensitive data
+   gets printed.
+*/
+#if defined(ENABLE_DEBUG_OUTPUT) && !defined(ENABLE_CTGRIND)
         size_t i;
         printf("%16s: ", label);
         for (i = 0; i < len; i++) {
@@ -109,7 +113,7 @@ static inline uint64_t bswap64(uint64_t x) {
 #endif
 
 static inline uint64_t getword(block const *block, size_t i) {
-#ifndef AES_SIV_DEBUG_WEIRD_ENDIAN
+#ifndef ENABLE_FORCE_WEIRD_ENDIAN
         if (endian.byte == 0x01) {
                 return block->word[i];
         } else if (endian.byte == 0x04) {
@@ -125,13 +129,13 @@ static inline uint64_t getword(block const *block, size_t i) {
                        ((uint64_t)block->byte[i + 2] << 40) |
                        ((uint64_t)block->byte[i + 1] << 48) |
                        ((uint64_t)block->byte[i] << 56);
-#ifndef AES_SIV_DEBUG_WEIRD_ENDIAN
+#ifndef ENABLE_FORCE_WEIRD_ENDIAN
         }
 #endif
 }
 
 static inline void putword(block *block, size_t i, uint64_t x) {
-#ifndef AES_SIV_DEBUG_WEIRD_ENDIAN
+#ifndef ENABLE_FORCE_WEIRD_ENDIAN
         if (endian.byte == 0x01) {
                 block->word[i] = x;
         } else if (endian.byte == 0x04) {
@@ -147,7 +151,7 @@ static inline void putword(block *block, size_t i, uint64_t x) {
                 block->byte[i + 5] = (unsigned char)((x >> 16) & 0xff);
                 block->byte[i + 6] = (unsigned char)((x >> 8) & 0xff);
                 block->byte[i + 7] = (unsigned char)(x & 0xff);
-#ifndef AES_SIV_DEBUG_WEIRD_ENDIAN
+#ifndef ENABLE_FORCE_WEIRD_ENDIAN
         }
 #endif
 }
@@ -233,6 +237,7 @@ int AES_SIV_Init(AES_SIV_CTX *ctx, unsigned char const *key, size_t key_len) {
         const static unsigned char zero[] = {0, 0, 0, 0, 0, 0, 0, 0,
                                              0, 0, 0, 0, 0, 0, 0, 0};
         size_t out_len;
+	int ret = 0;
 
         ct_poison(key, sizeof key);
 
@@ -240,56 +245,61 @@ int AES_SIV_Init(AES_SIV_CTX *ctx, unsigned char const *key, size_t key_len) {
         case 32:
                 if (UNLIKELY(CMAC_Init(ctx->cmac_ctx_init, key, 16,
                                        EVP_aes_128_cbc(), NULL) != 1)) {
-                        return 0;
+                        goto done;
                 }
                 if (UNLIKELY(AES_set_encrypt_key(key + 16, 128,
                                                  &ctx->aes_key) != 0)) {
-                        return 0;
+                        goto done;
                 }
                 break;
         case 48:
                 if (UNLIKELY(CMAC_Init(ctx->cmac_ctx_init, key, 24,
                                        EVP_aes_192_cbc(), NULL) != 1)) {
-                        return 0;
+                        goto done;
                 }
                 if (UNLIKELY(AES_set_encrypt_key(key + 24, 192,
                                                  &ctx->aes_key) != 0)) {
-                        return 0;
+                        goto done;
                 }
 
                 break;
         case 64:
                 if (UNLIKELY(CMAC_Init(ctx->cmac_ctx_init, key, 32,
                                        EVP_aes_256_cbc(), NULL) != 1)) {
-                        return 0;
+                        goto done;
                 }
                 if (UNLIKELY(AES_set_encrypt_key(key + 32, 256,
                                                  &ctx->aes_key) != 0)) {
-                        return 0;
+                        goto done;
                 }
                 break;
         default:
-                return 0;
+                goto done;
         }
 
         if (UNLIKELY(CMAC_CTX_copy(ctx->cmac_ctx, ctx->cmac_ctx_init) != 1)) {
-                return 0;
+                goto done;
         }
         if (UNLIKELY(CMAC_Update(ctx->cmac_ctx, zero, sizeof zero) != 1)) {
-                return 0;
+                goto done;
         }
         out_len = sizeof ctx->d;
         if (UNLIKELY(CMAC_Final(ctx->cmac_ctx, ctx->d.byte, &out_len) != 1)) {
-                return 0;
+                goto done;
         }
         debug("CMAC(zero)", ctx->d.byte, out_len);
-        return 1;
+	ret = 1;
+
+ done:
+	ct_unpoison(key, key_len);
+        return ret;
 }
 
 int AES_SIV_AssociateData(AES_SIV_CTX *ctx, unsigned char const *data,
                           size_t len) {
         block cmac_out;
         size_t out_len = sizeof cmac_out;
+	int ret = 0;
 
         ct_poison(data, len);
 
@@ -297,50 +307,58 @@ int AES_SIV_AssociateData(AES_SIV_CTX *ctx, unsigned char const *data,
         debug("double()", ctx->d.byte, 16);
 
         if (UNLIKELY(CMAC_CTX_copy(ctx->cmac_ctx, ctx->cmac_ctx_init) != 1)) {
-                return 0;
+		goto done;
         }
         if (UNLIKELY(CMAC_Update(ctx->cmac_ctx, data, len) != 1)) {
-                return 0;
+                goto done;
         }
         if (UNLIKELY(CMAC_Final(ctx->cmac_ctx, cmac_out.byte, &out_len) != 1)) {
-                return 0;
+                goto done;
         }
         assert(out_len == 16);
         debug("CMAC(ad)", cmac_out.byte, 16);
 
         xorblock(&ctx->d, &cmac_out);
         debug("xor", ctx->d.byte, 16);
-	return 1;
+	ret = 1;
+
+done:
+	ct_unpoison(data, len);
+	return ret;
 }
 
 int AES_SIV_EncryptFinal(AES_SIV_CTX *ctx, unsigned char *v_out,
                          unsigned char *c_out, unsigned char const *plaintext,
                          size_t len) {
         block t, q, ctmp, ptmp;
+	size_t len_remaining = len;
         size_t out_len = sizeof q;
+	unsigned char *cptr = c_out;
+	unsigned char const *pptr = plaintext;
+	int ret = 0;
 
         ct_poison(plaintext, len);
 
 #if SIZE_MAX > UINT64_C(0xffffffffffffffff)
         if (UNLIKELY(len >= ((size_t)1) << 67)) {
-                return 0;
+                goto done;
         }
 #endif
 
         if (UNLIKELY(CMAC_CTX_copy(ctx->cmac_ctx, ctx->cmac_ctx_init) != 1)) {
-                return 0;
+                goto done;
         }
         if (len >= 16) {
                 if (UNLIKELY(CMAC_Update(ctx->cmac_ctx, plaintext, len - 16) !=
                              1)) {
-                        return 0;
+                        goto done;
                 }
                 debug("xorend part 1", plaintext, len - 16);
                 memcpy(&t, plaintext + (len - 16), 16);
                 xorblock(&t, &ctx->d);
                 debug("xorend part 2", t.byte, 16);
                 if (UNLIKELY(CMAC_Update(ctx->cmac_ctx, t.byte, 16) != 1)) {
-                        return 0;
+                        goto done;
                 }
         } else {
                 size_t i;
@@ -353,11 +371,11 @@ int AES_SIV_EncryptFinal(AES_SIV_CTX *ctx, unsigned char *v_out,
                 xorblock(&t, &ctx->d);
                 debug("xor", t.byte, 16);
                 if (UNLIKELY(CMAC_Update(ctx->cmac_ctx, t.byte, 16) != 1)) {
-                        return 0;
+                        goto done;
                 }
         }
         if (UNLIKELY(CMAC_Final(ctx->cmac_ctx, q.byte, &out_len) != 1)) {
-                return 0;
+                goto done;
         }
         assert(out_len == 16);
         debug("CMAC(final)", q.byte, 16);
@@ -366,41 +384,48 @@ int AES_SIV_EncryptFinal(AES_SIV_CTX *ctx, unsigned char *v_out,
         q.byte[8] &= 0x7f;
         q.byte[12] &= 0x7f;
 
-        while (len >= 16) {
-                memcpy(&ptmp, plaintext, 16);
+        while (len_remaining >= 16) {
+                memcpy(&ptmp, pptr, 16);
                 debug("CTR", q.byte, 16);
                 AES_encrypt(q.byte, ctmp.byte, &ctx->aes_key);
                 debug("E(K,CTR)", ctmp.byte, 16);
                 xorblock(&ctmp, &ptmp);
-                memcpy(c_out, &ctmp, 16);
-                c_out += 16;
-                plaintext += 16;
-                len -= 16;
+                memcpy(cptr, &ctmp, 16);
+                cptr += 16;
+                pptr += 16;
+                len_remaining -= 16;
                 ctrinc(&q);
         }
 
-        if (len > 0) {
-                memcpy(&t, plaintext, len);
+        if (len_remaining > 0) {
+                memcpy(&t, pptr, len_remaining);
                 debug("CTR", q.byte, 16);
                 AES_encrypt(q.byte, q.byte, &ctx->aes_key);
                 debug("E(K,CTR)", q.byte, 16);
                 xorblock(&t, &q);
-                debug("ciphertext", t.byte, len);
-                memcpy(c_out, &t, len);
+                debug("ciphertext", t.byte, len_remaining);
+                memcpy(cptr, &t, len_remaining);
         }
+	ret = 1;
 
-        return 1;
+done:
+	ct_unpoison(plaintext, len);
+        ct_unpoison(c_out, len);
+        ct_unpoison(v_out, 16);
+        return ret;
 }
 
 int AES_SIV_DecryptFinal(AES_SIV_CTX *ctx, unsigned char *out,
                          unsigned char const *v, unsigned char const *c,
                          size_t len) {
         block t, q, ctmp, ptmp;
-        unsigned char *orig_out = out;
-        size_t orig_len = len;
+	size_t len_remaining = len;
         size_t out_len = sizeof q;
+	unsigned char const *cptr = c;
+	unsigned char *pptr = out;
         size_t i;
         uint64_t result;
+	int ret = 0;
 
         ct_poison(v, 16);
         ct_poison(c, len);
@@ -414,45 +439,43 @@ int AES_SIV_DecryptFinal(AES_SIV_CTX *ctx, unsigned char *out,
         q.byte[8] &= 0x7f;
         q.byte[12] &= 0x7f;
 
-        while (len >= 16) {
-                memcpy(&ctmp, c, 16);
+        while (len_remaining >= 16) {
+                memcpy(&ctmp, cptr, 16);
                 debug("CTR", q.byte, 16);
                 AES_encrypt(q.byte, ptmp.byte, &ctx->aes_key);
                 debug("E(K,CTR)", ptmp.byte, 16);
                 xorblock(&ptmp, &ctmp);
                 debug("plaintext", ptmp.byte, 16);
-                memcpy(out, &ptmp, 16);
-                out += 16;
-                c += 16;
-                len -= 16;
+                memcpy(pptr, &ptmp, 16);
+                pptr += 16;
+                cptr += 16;
+                len_remaining -= 16;
                 ctrinc(&q);
         }
 
-        if (len > 0) {
-                memcpy(&t, c, len);
+        if (len_remaining > 0) {
+                memcpy(&t, cptr, len_remaining);
                 debug("CTR", q.byte, 16);
                 AES_encrypt(q.byte, q.byte, &ctx->aes_key);
                 debug("E(K,CTR)", q.byte, 16);
                 xorblock(&t, &q);
-                debug("plaintext", t.byte, len);
-                memcpy(out, &t, len);
+                debug("plaintext", t.byte, len_remaining);
+                memcpy(pptr, &t, len_remaining);
         }
 
-        len = orig_len;
-        out = orig_out;
         if (UNLIKELY(CMAC_CTX_copy(ctx->cmac_ctx, ctx->cmac_ctx_init) != 1)) {
-                return 0;
+                goto done;
         }
         if (len >= 16) {
                 debug("xorend part 1", out, len - 16);
                 if (UNLIKELY(CMAC_Update(ctx->cmac_ctx, out, len - 16) != 1)) {
-                        return 0;
+                        goto done;
                 }
                 memcpy(&t, out + (len - 16), 16);
                 xorblock(&t, &ctx->d);
                 debug("xorend part 2", t.byte, 16);
                 if (UNLIKELY(CMAC_Update(ctx->cmac_ctx, t.byte, 16) != 1)) {
-                        return 0;
+                        goto done;
                 }
         } else {
                 memcpy(&t, out, len);
@@ -464,29 +487,34 @@ int AES_SIV_DecryptFinal(AES_SIV_CTX *ctx, unsigned char *out,
                 xorblock(&t, &ctx->d);
                 debug("xor", t.byte, 16);
                 if (UNLIKELY(CMAC_Update(ctx->cmac_ctx, t.byte, 16) != 1)) {
-                        return 0;
+                        goto done;
                 }
         }
 
         if (UNLIKELY(CMAC_Final(ctx->cmac_ctx, t.byte, &out_len) != 1)) {
-                return 0;
+                goto done;
         }
         debug("CMAC(final)", t.byte, 16);
         assert(out_len == 16);
 
-        for (i = 0; i < 16; i++)
+        for (i = 0; i < 16; i++) {
                 t.byte[i] ^= v[i];
+	}
 
         result = t.word[0] | t.word[1];
         ct_unpoison(&result, sizeof result);
-
-        if(result == UINT64_C(0)) {
-                ct_unpoison(out, orig_len);
-                return 1;
+	ret = !result;
+       
+        if(ret) {
+                ct_unpoison(out, len);
         } else {
-                OPENSSL_cleanse(out, orig_len);
-                return 0;
+                OPENSSL_cleanse(out, len);
         }
+
+done:
+	ct_unpoison(v, 16);
+	ct_unpoison(c, len);
+	return ret;
 }
 
 int AES_SIV_Encrypt(AES_SIV_CTX *ctx, unsigned char *out, size_t *out_len,
@@ -494,11 +522,6 @@ int AES_SIV_Encrypt(AES_SIV_CTX *ctx, unsigned char *out, size_t *out_len,
                     unsigned char const *nonce, size_t nonce_len,
                     unsigned char const *plaintext, size_t plaintext_len,
                     unsigned char const *ad, size_t ad_len) {
-        ct_poison(key, key_len);
-        ct_poison(nonce, nonce_len);
-        ct_poison(plaintext, plaintext_len);
-        ct_poison(ad, ad_len);
-        
         if (UNLIKELY(*out_len < plaintext_len + 16)) {
                 return 0;
         }
@@ -519,9 +542,7 @@ int AES_SIV_Encrypt(AES_SIV_CTX *ctx, unsigned char *out, size_t *out_len,
                 return 0;
         }
 
-        ct_unpoison(out, *out_len);
         debug("IV || C", out, *out_len);
-
         return 1;
 }
 
@@ -530,11 +551,6 @@ int AES_SIV_Decrypt(AES_SIV_CTX *ctx, unsigned char *out, size_t *out_len,
                     unsigned char const *nonce, size_t nonce_len,
                     unsigned char const *ciphertext, size_t ciphertext_len,
                     unsigned char const *ad, size_t ad_len) {
-        ct_poison(key, key_len);
-        ct_poison(nonce, nonce_len);
-        ct_poison(ciphertext, ciphertext_len);
-        ct_poison(ad, ad_len);
-        
         if (UNLIKELY(ciphertext_len < 16)) {
                 return 0;
         }
@@ -557,7 +573,6 @@ int AES_SIV_Decrypt(AES_SIV_CTX *ctx, unsigned char *out, size_t *out_len,
                                           ciphertext_len - 16) != 1)) {
                 return 0;
         }
-        ct_unpoison(out, *out_len);
         debug("plaintext", out, *out_len);
         return 1;
 }

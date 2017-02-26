@@ -1,0 +1,5 @@
+#ifndef AES_SIV_CONFIG_H_
+#define AES_SIV_CONFIG_H_
+#cmakedefine ENABLE_CTGRIND 1
+#cmakedefine ENABLE_FORCE_WEIRD_ENDIAN 1
+#endif

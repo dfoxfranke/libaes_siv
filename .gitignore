@@ -13,3 +13,6 @@ CMakeFiles/
 *.cmake
 Makefile
 install_manifest.txt
+config.h
+Testing/
+aes_siv.s

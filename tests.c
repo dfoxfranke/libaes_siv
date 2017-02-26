@@ -2,9 +2,10 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-#undef NDEBUG
+#include "config.h"
 #include "aes_siv.h"
 
+#undef NDEBUG
 #include <assert.h>
 #include <inttypes.h>
 #include <stdint.h>
