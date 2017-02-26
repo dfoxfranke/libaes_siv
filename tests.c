@@ -455,6 +455,13 @@ static void test_copy() {
                                    plaintext2, sizeof plaintext2);
 	assert(ret == 1);
 	assert(memcmp(ciphertext, ciphertext2_out, sizeof ciphertext));
+
+	AES_SIV_CTX_cleanup(ctx1);
+	AES_SIV_CTX_cleanup(ctx2);
+	AES_SIV_CTX_cleanup(ctx3);
+	AES_SIV_CTX_free(ctx1);
+	AES_SIV_CTX_free(ctx2);
+	AES_SIV_CTX_free(ctx3);	
 }
 
 static void test_bad_key() {
