@@ -200,14 +200,14 @@ static inline void dbl(block *block) {
 }
 
 struct AES_SIV_CTX_st {
+        block d;
+        block pad[32];
         EVP_CIPHER_CTX *cipher_ctx;
         /* SIV_AES_Init() sets up cmac_ctx_init. cmac_ctx is a scratchpad used
            by SIV_AES_AssociateData() and SIV_AES_(En|De)cryptFinal. */
         CMAC_CTX *cmac_ctx_init, *cmac_ctx;
         /* d stores intermediate results of S2V; it corresponds to D from the
            pseudocode in section 2.4 of RFC 5297. */
-        block d;
-        block pad[32];
 };
 
 void AES_SIV_CTX_cleanup(AES_SIV_CTX *ctx) {
