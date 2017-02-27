@@ -352,83 +352,99 @@ done:
         return ret;
 }
 
-int AES_SIV_EncryptFinal(AES_SIV_CTX *ctx, unsigned char *v_out,
-                         unsigned char *c_out, unsigned char const *plaintext,
-                         size_t len) {
-        block t, q;
-        size_t len_remaining = len;
-        size_t out_len = sizeof q;
-        int int_out_len;
-        unsigned char *cptr = c_out;
-        unsigned char const *pptr = plaintext;
-        int ret = 0;
-
-        ct_poison(plaintext, len);
-
-#if SIZE_MAX > UINT64_C(0xffffffffffffffff)
-        if (UNLIKELY(len >= ((size_t)1) << 67)) {
-                goto done;
-        }
-#endif
+static inline int do_s2v_p(AES_SIV_CTX *ctx, block *out,
+                           unsigned char const* in, size_t len) {
+        block t;
+        size_t out_len = sizeof out->byte;
 
         if (UNLIKELY(CMAC_CTX_copy(ctx->cmac_ctx, ctx->cmac_ctx_init) != 1)) {
-                goto done;
+                return 0;
         }
-        if (len >= 16) {
-                if (UNLIKELY(CMAC_Update(ctx->cmac_ctx, plaintext, len - 16) !=
-                             1)) {
-                        goto done;
+
+        if(len >= 16) {
+                if(UNLIKELY(CMAC_Update(ctx->cmac_ctx, in, len - 16) != 1)) {
+                        return 0;
                 }
-                debug("xorend part 1", plaintext, len - 16);
-                memcpy(&t, plaintext + (len - 16), 16);
+                debug("xorend part 1", in, len - 16);
+                memcpy(&t, in + (len-16), 16);
                 xorblock(&t, &ctx->d);
                 debug("xorend part 2", t.byte, 16);
-                if (UNLIKELY(CMAC_Update(ctx->cmac_ctx, t.byte, 16) != 1)) {
-                        goto done;
+                if(UNLIKELY(CMAC_Update(ctx->cmac_ctx, t.byte, 16) != 1)) {
+                        return 0;
                 }
         } else {
                 size_t i;
-                memcpy(&t, plaintext, len);
+                memcpy(&t, in, len);
                 t.byte[len] = 0x80;
-                for (i = len + 1; i < 16; i++)
+                for(i = len + 1; i < 16; i++) {
                         t.byte[i] = 0;
+                }
                 debug("pad", t.byte, 16);
                 dbl(&ctx->d);
                 xorblock(&t, &ctx->d);
                 debug("xor", t.byte, 16);
-                if (UNLIKELY(CMAC_Update(ctx->cmac_ctx, t.byte, 16) != 1)) {
-                        goto done;
+                if(UNLIKELY(CMAC_Update(ctx->cmac_ctx, t.byte, 16) != 1)) {
+                        return 0;
                 }
         }
-        if (UNLIKELY(CMAC_Final(ctx->cmac_ctx, q.byte, &out_len) != 1)) {
-                goto done;
+        if(UNLIKELY(CMAC_Final(ctx->cmac_ctx, out->byte, &out_len) != 1)) {
+                return 0;
         }
         assert(out_len == 16);
-        debug("CMAC(final)", q.byte, 16);
+        debug("CMAC(final)", out->byte, 16);
+        return 1;
+}
 
+static inline int do_encrypt(EVP_CIPHER_CTX *ctx, unsigned char *out,
+                             unsigned char const *in, size_t len, block *icv) {
+        const int chunk_size = 1 << 30;
+        size_t len_remaining = len;
+        int out_len;
+        int ret;
+
+        if(UNLIKELY(EVP_EncryptInit_ex(ctx, NULL, NULL, NULL, icv->byte)
+                    != 1)) {
+                return 0;
+        }
+
+        while(UNLIKELY(len_remaining > (size_t)chunk_size)) {
+                out_len = chunk_size;
+                if(UNLIKELY(EVP_EncryptUpdate(ctx, out, &out_len, in, out_len)
+                            != 1)) {
+                        return 0;
+                }
+                assert(out_len == chunk_size);
+                out += out_len;
+                in += out_len;
+                len_remaining -= (size_t)out_len;
+        }
+
+        out_len = (int)len_remaining;
+        ret = EVP_EncryptUpdate(ctx, out, &out_len, in, out_len);
+        assert(!ret || out_len == (int)len_remaining);
+        return ret;
+}
+
+int AES_SIV_EncryptFinal(AES_SIV_CTX *ctx, unsigned char *v_out,
+                         unsigned char *c_out, unsigned char const *plaintext,
+                         size_t len) {
+        block q;
+        int ret = 0;
+
+        ct_poison(plaintext, len);
+
+        if(UNLIKELY(do_s2v_p(ctx, &q, plaintext, len) != 1)) {
+                goto done;
+        }
         memcpy(v_out, &q, 16);
         q.byte[8] &= 0x7f;
         q.byte[12] &= 0x7f;
 
-        if(UNLIKELY(EVP_EncryptInit_ex(ctx->cipher_ctx, NULL, NULL, NULL, q.byte) != 1)) {
+        if(UNLIKELY(do_encrypt(ctx->cipher_ctx, c_out, plaintext, len, &q)
+                    != 1)) {
                 goto done;
         }
 
-        while(UNLIKELY(len_remaining > (1<<30))) {
-                int_out_len = (1<<30);
-                if(UNLIKELY(EVP_EncryptUpdate(ctx->cipher_ctx, cptr, &int_out_len,
-                                              pptr, int_out_len) != 1)) {
-                        goto done;
-                }
-                cptr += (1<<30);
-                pptr += (1<<30);
-                len_remaining -= (1<<30);
-        }
-        int_out_len = (int)len_remaining;       
-        if(UNLIKELY(EVP_EncryptUpdate(ctx->cipher_ctx, cptr, &int_out_len,
-                                      pptr, int_out_len) != 1)) {
-                goto done;
-        }
         ret = 1;
         debug("ciphertext", c_out, len);
 
@@ -443,11 +459,6 @@ int AES_SIV_DecryptFinal(AES_SIV_CTX *ctx, unsigned char *out,
                          unsigned char const *v, unsigned char const *c,
                          size_t len) {
         block t, q;
-        size_t len_remaining = len;
-        size_t out_len = sizeof q;
-        int int_out_len;
-        unsigned char const *cptr = c;
-        unsigned char *pptr = out;
         size_t i;
         uint64_t result;
         int ret = 0;
@@ -455,69 +466,18 @@ int AES_SIV_DecryptFinal(AES_SIV_CTX *ctx, unsigned char *out,
         ct_poison(v, 16);
         ct_poison(c, len);
 
-#if SIZE_MAX > UINT64_C(0xffffffffffffffff)
-        if (UNLIKELY(len >= ((size_t)1) << 67))
-                return 0;
-#endif
-
         memcpy(&q, v, 16);
         q.byte[8] &= 0x7f;
         q.byte[12] &= 0x7f;
 
-        if(UNLIKELY(EVP_EncryptInit_ex(ctx->cipher_ctx, NULL, NULL, NULL, q.byte) != 1)) {
-                goto done;
-        }
-
-        while(UNLIKELY(len_remaining > (1<<30))) {
-                int_out_len = (1<<30);
-                if(UNLIKELY(EVP_EncryptUpdate(ctx->cipher_ctx, pptr, &int_out_len,
-                                              cptr, int_out_len) != 1)) {
-                        goto done;
-                }
-                cptr += (1<<30);
-                pptr += (1<<30);
-                len_remaining -= (1<<30);
-        }
-        int_out_len = (int)len_remaining;       
-        if(UNLIKELY(EVP_EncryptUpdate(ctx->cipher_ctx, pptr, &int_out_len,
-                                      cptr, int_out_len) != 1)) {
+        if(UNLIKELY(do_encrypt(ctx->cipher_ctx, out, c, len, &q) != 1)) {
                 goto done;
         }
         debug("plaintext", out, len);
 
-        if (UNLIKELY(CMAC_CTX_copy(ctx->cmac_ctx, ctx->cmac_ctx_init) != 1)) {
+        if(UNLIKELY(do_s2v_p(ctx, &t, out, len) != 1)) {
                 goto done;
         }
-        if (len >= 16) {
-                debug("xorend part 1", out, len - 16);
-                if (UNLIKELY(CMAC_Update(ctx->cmac_ctx, out, len - 16) != 1)) {
-                        goto done;
-                }
-                memcpy(&t, out + (len - 16), 16);
-                xorblock(&t, &ctx->d);
-                debug("xorend part 2", t.byte, 16);
-                if (UNLIKELY(CMAC_Update(ctx->cmac_ctx, t.byte, 16) != 1)) {
-                        goto done;
-                }
-        } else {
-                memcpy(&t, out, len);
-                t.byte[len] = 0x80;
-                for (i = len + 1; i < 16; i++)
-                        t.byte[i] = 0;
-                debug("pad", t.byte, 16);
-                dbl(&ctx->d);
-                xorblock(&t, &ctx->d);
-                debug("xor", t.byte, 16);
-                if (UNLIKELY(CMAC_Update(ctx->cmac_ctx, t.byte, 16) != 1)) {
-                        goto done;
-                }
-        }
-
-        if (UNLIKELY(CMAC_Final(ctx->cmac_ctx, t.byte, &out_len) != 1)) {
-                goto done;
-        }
-        debug("CMAC(final)", t.byte, 16);
-        assert(out_len == 16);
 
         for (i = 0; i < 16; i++) {
                 t.byte[i] ^= v[i];
