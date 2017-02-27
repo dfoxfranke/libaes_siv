@@ -173,10 +173,6 @@ static inline void putword(block *block, size_t i, uint64_t x) {
 #endif
 }
 
-static inline void ctrinc(block *block) {
-        putword(block, 1, getword(block, 1) + 1);
-}
-
 static inline void xorblock(block *x, block const *y) {
         x->word[0] ^= y->word[0];
         x->word[1] ^= y->word[1];
@@ -201,7 +197,6 @@ static inline void dbl(block *block) {
 
 struct AES_SIV_CTX_st {
         block d;
-        block pad[32];
         EVP_CIPHER_CTX *cipher_ctx;
         /* SIV_AES_Init() sets up cmac_ctx_init. cmac_ctx is a scratchpad used
            by SIV_AES_AssociateData() and SIV_AES_(En|De)cryptFinal. */
@@ -215,7 +210,6 @@ void AES_SIV_CTX_cleanup(AES_SIV_CTX *ctx) {
         CMAC_CTX_cleanup(ctx->cmac_ctx_init);
         CMAC_CTX_cleanup(ctx->cmac_ctx);
         OPENSSL_cleanse(&ctx->d, sizeof ctx->d);
-        OPENSSL_cleanse(&ctx->pad, sizeof ctx->pad);
 }
 
 void AES_SIV_CTX_free(AES_SIV_CTX *ctx) {
@@ -248,6 +242,7 @@ AES_SIV_CTX *AES_SIV_CTX_new() {
 }
 
 int AES_SIV_CTX_copy(AES_SIV_CTX *dst, AES_SIV_CTX const *src) {
+        memcpy(&dst->d, &src->d, sizeof src->d);
         if(UNLIKELY(EVP_CIPHER_CTX_copy(dst->cipher_ctx, src->cipher_ctx)
                     != 1)) {
                 return 0;
@@ -256,34 +251,9 @@ int AES_SIV_CTX_copy(AES_SIV_CTX *dst, AES_SIV_CTX const *src) {
                      != 1)) {
                 return 0;
         }
-        memcpy(&dst->d, &src->d, sizeof src->d);
-        /* Not necessary to copy cmac_ctx or pad since they're just
-         * temporary storage */
+        /* Not necessary to copy cmac_ctx since it's just temporary
+         * storage */
         return 1;
-}
-
-static inline size_t bytes_to_blocks(size_t n) {
-        return (n >> 4) + (size_t)!!(n & 0xf);
-}
-
-static inline int encrypt_ctr(EVP_CIPHER_CTX *ctx, block *ctr, block *out, size_t num_blocks) {
-        size_t i;
-        int out_len, ret;
-
-        assert((size_t)(INT_MAX>>4) >= num_blocks);
-        out_len = (int)(num_blocks << 4);
-        
-        for(i=0;i<num_blocks;i++) {
-                memcpy(&out[i], ctr, 16);
-                ctrinc(ctr);
-        }
-
-        debug("CTR", out->byte, num_blocks << 4);
-        ret = EVP_EncryptUpdate(ctx, out->byte, &out_len, out->byte, out_len);
-        if(ret) {
-                debug("E(K,CTR)", out->byte, num_blocks << 4);
-        }
-        return ret;
 }
 
 int AES_SIV_Init(AES_SIV_CTX *ctx, unsigned char const *key, size_t key_len) {
@@ -301,7 +271,7 @@ int AES_SIV_Init(AES_SIV_CTX *ctx, unsigned char const *key, size_t key_len) {
                         goto done;
                 }
                 if (UNLIKELY(EVP_EncryptInit_ex(ctx->cipher_ctx,
-                                                EVP_aes_128_ecb(),
+                                                EVP_aes_128_ctr(),
                                                 NULL, key + 16, NULL) != 1)) {
                         goto done;
                 }
@@ -312,7 +282,7 @@ int AES_SIV_Init(AES_SIV_CTX *ctx, unsigned char const *key, size_t key_len) {
                         goto done;
                 }
                 if (UNLIKELY(EVP_EncryptInit_ex(ctx->cipher_ctx,
-                                                EVP_aes_192_ecb(),
+                                                EVP_aes_192_ctr(),
                                                 NULL, key + 24, NULL) != 1)) {
                         goto done;
                 }
@@ -323,7 +293,7 @@ int AES_SIV_Init(AES_SIV_CTX *ctx, unsigned char const *key, size_t key_len) {
                         goto done;
                 }
                 if (UNLIKELY(EVP_EncryptInit_ex(ctx->cipher_ctx,
-                                                EVP_aes_256_ecb(),
+                                                EVP_aes_256_ctr(),
                                                 NULL, key + 32, NULL) != 1)) {
                         goto done;
                 }               
@@ -388,6 +358,7 @@ int AES_SIV_EncryptFinal(AES_SIV_CTX *ctx, unsigned char *v_out,
         block t, q;
         size_t len_remaining = len;
         size_t out_len = sizeof q;
+        int int_out_len;
         unsigned char *cptr = c_out;
         unsigned char const *pptr = plaintext;
         int ret = 0;
@@ -439,36 +410,24 @@ int AES_SIV_EncryptFinal(AES_SIV_CTX *ctx, unsigned char *v_out,
         q.byte[8] &= 0x7f;
         q.byte[12] &= 0x7f;
 
-        while(len_remaining > 0) {
-                size_t i;
-                size_t num_blocks = bytes_to_blocks(len_remaining);
-                if(num_blocks > sizeof ctx->pad / sizeof (block)) {
-                        num_blocks = sizeof ctx->pad / sizeof (block);
-                }
-                
-                if(UNLIKELY(encrypt_ctr(ctx->cipher_ctx, &q, ctx->pad,
-                                        num_blocks) != 1)) {
+        if(UNLIKELY(EVP_EncryptInit_ex(ctx->cipher_ctx, NULL, NULL, NULL, q.byte) != 1)) {
+                goto done;
+        }
+
+        while(UNLIKELY(len_remaining > (1<<30))) {
+                int_out_len = (1<<30);
+                if(UNLIKELY(EVP_EncryptUpdate(ctx->cipher_ctx, cptr, &int_out_len,
+                                              pptr, int_out_len) != 1)) {
                         goto done;
                 }
-
-                for(i=0; i<num_blocks; i++) {
-                        block ptmp;
-                        if(LIKELY(len_remaining >= 16)) {
-                                memcpy(&ptmp, pptr, 16);
-                                xorblock(&ctx->pad[i], &ptmp);
-                                memcpy(cptr, &ctx->pad[i], 16);
-                                pptr += 16;
-                                cptr += 16;
-                                len_remaining -= 16;
-                        } else {
-                                size_t copy_len;
-                                copy_len = len_remaining < 16 ? len_remaining : 16;
-                                memcpy(&ptmp, pptr, copy_len);
-                                xorblock(&ctx->pad[i], &ptmp);
-                                memcpy(cptr, &ctx->pad[i], copy_len);
-                                len_remaining = 0;
-                        }
-                }
+                cptr += (1<<30);
+                pptr += (1<<30);
+                len_remaining -= (1<<30);
+        }
+        int_out_len = (int)len_remaining;       
+        if(UNLIKELY(EVP_EncryptUpdate(ctx->cipher_ctx, cptr, &int_out_len,
+                                      pptr, int_out_len) != 1)) {
+                goto done;
         }
         ret = 1;
         debug("ciphertext", c_out, len);
@@ -486,6 +445,7 @@ int AES_SIV_DecryptFinal(AES_SIV_CTX *ctx, unsigned char *out,
         block t, q;
         size_t len_remaining = len;
         size_t out_len = sizeof q;
+        int int_out_len;
         unsigned char const *cptr = c;
         unsigned char *pptr = out;
         size_t i;
@@ -504,35 +464,24 @@ int AES_SIV_DecryptFinal(AES_SIV_CTX *ctx, unsigned char *out,
         q.byte[8] &= 0x7f;
         q.byte[12] &= 0x7f;
 
-        while(len_remaining > 0) {
-                size_t num_blocks = bytes_to_blocks(len_remaining);
-                if(num_blocks > sizeof ctx->pad / sizeof (block)) {
-                        num_blocks = sizeof ctx->pad / sizeof (block);
-                }
-                
-                if(UNLIKELY(encrypt_ctr(ctx->cipher_ctx, &q, ctx->pad,
-                                        num_blocks) != 1)) {
+        if(UNLIKELY(EVP_EncryptInit_ex(ctx->cipher_ctx, NULL, NULL, NULL, q.byte) != 1)) {
+                goto done;
+        }
+
+        while(UNLIKELY(len_remaining > (1<<30))) {
+                int_out_len = (1<<30);
+                if(UNLIKELY(EVP_EncryptUpdate(ctx->cipher_ctx, pptr, &int_out_len,
+                                              cptr, int_out_len) != 1)) {
                         goto done;
                 }
-                
-                for(i=0; i<num_blocks; i++) {
-                        block ctmp;
-                        if(LIKELY(len_remaining >= 16)) {
-                                memcpy(&ctmp, cptr, 16);
-                                xorblock(&ctx->pad[i], &ctmp);
-                                memcpy(pptr, &ctx->pad[i], 16);
-                                pptr += 16;
-                                cptr += 16;
-                                len_remaining -= 16;
-                        } else {
-                                size_t copy_len;
-                                copy_len = len_remaining < 16 ? len_remaining : 16;
-                                memcpy(&ctmp, cptr, copy_len);
-                                xorblock(&ctx->pad[i], &ctmp);
-                                memcpy(pptr, &ctx->pad[i], copy_len);
-                                len_remaining = 0;
-                        }
-                }
+                cptr += (1<<30);
+                pptr += (1<<30);
+                len_remaining -= (1<<30);
+        }
+        int_out_len = (int)len_remaining;       
+        if(UNLIKELY(EVP_EncryptUpdate(ctx->cipher_ctx, pptr, &int_out_len,
+                                      cptr, int_out_len) != 1)) {
+                goto done;
         }
         debug("plaintext", out, len);
 
