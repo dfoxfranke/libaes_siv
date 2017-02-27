@@ -266,7 +266,7 @@ static inline size_t bytes_to_blocks(size_t n) {
         return (n >> 4) + (size_t)!!(n & 0xf);
 }
 
-int encrypt_ctr(EVP_CIPHER_CTX *ctx, block *ctr, block *out, size_t num_blocks) {
+static inline int encrypt_ctr(EVP_CIPHER_CTX *ctx, block *ctr, block *out, size_t num_blocks) {
         size_t i;
         int out_len, ret;
 
