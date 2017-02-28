@@ -15,6 +15,11 @@
                             (LIBAES_SIV_VERSION_MINOR << 8) +  \
                             LIBAES_SIV_VERSION_PATCH)
 
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 typedef struct AES_SIV_CTX_st AES_SIV_CTX;
 
 AES_SIV_CTX *AES_SIV_CTX_new();
@@ -43,5 +48,10 @@ int AES_SIV_Decrypt(AES_SIV_CTX *ctx, unsigned char *out, size_t *out_len,
                     unsigned char const *nonce, size_t nonce_len,
                     unsigned char const *ciphertext, size_t ciphertext_len,
                     unsigned char const *ad, size_t ad_len);
+
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif
