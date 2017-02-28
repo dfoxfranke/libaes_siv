@@ -6,7 +6,7 @@ implementation of AES-SIV, written by Daniel Franke on behalf of
 [Apache License (v2.0)](https://www.apache.org/licenses/LICENSE-2.0).
 It uses OpenSSL for the underlying
 [AES](https://en.wikipedia.org/wiki/Advanced_Encryption_Standard) and
-[CMAC](https://en.wikipedia.org/wiki/One-key_MAC) primitives and
+[CMAC](https://en.wikipedia.org/wiki/One-key_MAC) implementations and
 follows a similar interface style.
 
 ## Overview of SIV mode
@@ -17,17 +17,17 @@ for [authenticated encryption with associated
 data](https://en.wikipedia.org/wiki/Authenticated_encryption) designed
 to be maximally resistant to accidental
 [nonce](https://en.wikipedia.org/wiki/Cryptographic_nonce) reuse.  If
-two messages are accidentially encrypted using the same nonce and the
+two messages are accidentally encrypted using the same nonce and the
 same associated data, the attacker learns nothing except whether or
-not plaintexts of the two messages are identical to each other.  SIV
-mode also permits the nonce to be intentionally omitted, resulting in
-a [deterministic encryption
+not the plaintexts of the two messages are identical to each other.
+SIV mode also permits the nonce to be intentionally omitted, resulting
+in a [deterministic encryption
 scheme](https://en.wikipedia.org/wiki/Deterministic_encryption).
 
 The drawback to SIV mode is that it requires two passes over its
 input. This makes it potentially clumsy for use with large messages
 since the entire message must be held in memory at one time. SIV mode
-is also a bit slower than most widely-used block cipher mode (but
+is also a bit slower than most widely-used block cipher modes (but
 can still be quite fast — see performance numbers below).
 
 Keys for SIV mode are twice the length of the keys for the underlying
@@ -39,14 +39,14 @@ and keys for AES-256-SIV are 512 bits long.
 Build dependencies:
 
 * Any ISO C89 compiler (GCC or Clang recommended). No C99 language
-  features are required, however <stdint.h> must be available and
-  define `uint64_t`. `char` must be 8 bits and arithmetic must be
+  features are required, however `<stdint.h>` must be available and
+  must define `uint64_t`. `char` must be 8 bits and arithmetic must be
   two's complement.
 * [CMake](https://cmake.org) >= 3.0
 * [OpenSSL](https://openssl.org) >=1.0.1 (libcrypto only). A more
   recent version is of course recommended since 1.0.1 is out of
   security support.
-* [Asciidoc](http://asciidoc.org) (only requried for building man pages)
+* [Asciidoc](http://asciidoc.org) (only required for building man pages)
 
 Running benchmarks requires a POSIX.1-2001 compliant OS, including
 the `clock_gettime` system call.
@@ -94,3 +94,20 @@ expert C programmers.
 
 Use the GitHub issue tracker. For reporting sensitive security issues,
 use the [author's PGP key](https://www.dfranke.us/contact.html).
+
+## A note on version numbers
+
+libaes_siv version numbers are of the form `<major>.<minor>.<patch>`
+and follow a semantic versioning scheme. The major version number
+will be incremented with any backward-incompatible ABI change. The
+minor version number will be incremented if new functionality is
+added without impacting ABI backward-compatibility. The patch
+version number will be incremented for releases that make no
+externally-visible changes.
+
+As a result of this scheme, on ELF platforms, the .so version will
+be the same as the release version.
+
+Version numbers indicate nothing about code stability or maturity.  No
+code known or suspected to be less suitable for production use than
+previous releases will ever be tagged with a version number.
