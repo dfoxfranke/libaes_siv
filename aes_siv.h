@@ -7,6 +7,14 @@
 
 #include <stddef.h>
 
+#define LIBAES_SIV_VERSION_MAJOR 1
+#define LIBAES_SIV_VERSION_MINOR 0
+#define LIBAES_SIV_VERSION_PATCH 0
+
+#define LIBAES_SIV_VERSION ((LIBAES_SIV_VERSION_MAJOR << 16) + \
+                            (LIBAES_SIV_VERSION_MINOR << 8) +  \
+                            LIBAES_SIV_VERSION_PATCH)
+
 typedef struct AES_SIV_CTX_st AES_SIV_CTX;
 
 AES_SIV_CTX *AES_SIV_CTX_new();

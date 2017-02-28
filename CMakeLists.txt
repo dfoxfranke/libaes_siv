@@ -29,7 +29,7 @@ configure_file(config.h.in config.h)
 
 add_library(aes_siv SHARED aes_siv.c)
 target_link_libraries(aes_siv ${OPENSSL_CRYPTO_LIBRARY})
-set_target_properties(aes_siv PROPERTIES SOVERSION 1)
+set_target_properties(aes_siv PROPERTIES VERSION "1.0.0" SOVERSION 1)
 
 add_library(aes_siv_static STATIC aes_siv.c)
 target_link_libraries(aes_siv_static ${OPENSSL_CRYPTO_LIBRARY})
