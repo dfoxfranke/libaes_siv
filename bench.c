@@ -138,8 +138,9 @@ call(fn fn, AES_SIV_CTX *ctx,
         rate = (double)count /
                 ((double)(end.tv_sec) - (double)(start.tv_sec) +
                  ((double)end.tv_nsec - (double)start.tv_nsec)/1000000000.);
-        printf("%10.2lf calls/second (%10.2lf MiB/s)\n",
+        printf("%12.2lf calls/second (%11.2lf ns/call, %8.2lf MiB/s)\n",
                rate,
+               1000000000./rate,
                scalbn(rate * (double)(ad_len + in_len),
                       -20));
 }
