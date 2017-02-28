@@ -440,6 +440,8 @@ int AES_SIV_EncryptFinal(AES_SIV_CTX *ctx, unsigned char *v_out,
         if(UNLIKELY(do_s2v_p(ctx, &q, plaintext, len) != 1)) {
                 goto done;
         }
+
+	ct_unpoison(&q, sizeof q);
         memcpy(v_out, &q, 16);
         q.byte[8] &= 0x7f;
         q.byte[12] &= 0x7f;
@@ -467,7 +469,6 @@ int AES_SIV_DecryptFinal(AES_SIV_CTX *ctx, unsigned char *out,
         uint64_t result;
         int ret = 0;
 
-        ct_poison(v, 16);
         ct_poison(c, len);
 
         memcpy(&q, v, 16);
@@ -498,7 +499,6 @@ int AES_SIV_DecryptFinal(AES_SIV_CTX *ctx, unsigned char *out,
         }
 
 done:
-        ct_unpoison(v, 16);
         ct_unpoison(c, len);
         return ret;
 }
