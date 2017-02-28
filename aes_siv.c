@@ -5,7 +5,6 @@
 #include "aes_siv.h"
 
 #include <assert.h>
-#include <inttypes.h>
 #include <stddef.h>
 #include <stdint.h>
 #ifdef ENABLE_DEBUG_OUTPUT
@@ -184,8 +183,8 @@ static inline void xorblock(block *x, block const *y) {
 static inline void dbl(block *block) {
         uint64_t high = getword(block, 0);
         uint64_t low = getword(block, 1);
-        uint64_t high_carry = high & (UINT64_C(1) << 63);
-        uint64_t low_carry = low & (UINT64_C(1) << 63);
+        uint64_t high_carry = high & (((uint64_t)1) << 63);
+        uint64_t low_carry = low & (((uint64_t)1) << 63);
         /* Assumes two's-complement arithmetic */
         int64_t low_mask = -((int64_t)(high_carry >> 63)) & 0x87;
         uint64_t high_mask = low_carry >> 63;
