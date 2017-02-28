@@ -1,0 +1,78 @@
+STEPS BEFORE TAGGING A RELEASE
+
+1. Examine CMakeLists.txt and aes_siv.h. Verify that the library version and
+   the LIBAES_SIV_VERSION_* macros are consistent with the version you plan
+   to tag.
+
+2. Build and run the test suite:
+
+  git clean -dxf
+  cmake . && make && make test
+
+  Verify that it passes. Repeat this step on every available test platform.
+
+3. Check coverage:
+
+  git clean -dxf
+  cmake -DENABLE_COVERAGE=1 -DENABLE_DEBUG_TINY_CHUNK_SIZE=1 . && make && make test
+  gcov CMakeFiles/runtests.dir/aes_siv_test.c.o
+
+  Check that gcov reports 100% coverage.
+
+4. Verify a clean run from the undefined behavior sanitizer:
+
+  git clean -dxf
+  cmake -DENABLE_SANITIZER=undefined . && make && make test
+
+  Verify that the UB sanitizer doesn't flag any issues. Repeat this
+  step on every available test platform.
+
+5. Verify a clean run under Valgrind:
+
+  git clean -dxf
+  cmake . && make
+  valgrind ./runtests > /dev/unll
+
+  Verify that valgrind reports no errors and that all memory is freed
+  before exiting. Repeat this step on every available test platform.
+
+6. Run through ctgrind (ensure that valgrind has the ctgrind patch applied):
+
+  git clean -dxf
+  cmake -DENABLE_CTGRIND=1 . && make
+  valgrind ./runtests > /dev/null
+
+  Verify that no errors are reported when code from libaes_siv is at
+  the top of the stack. Verify that any errors reported with OpenSSL
+  at the top of the stack are due to known issues. Repeat this step on
+  every available test platform.
+
+7. Run through the clang static analyzer:
+
+  git clean -dxf
+  scan-build cmake . && scan-build make
+
+8. Run benchmarks:
+
+  git clean -dxf
+  cmake . && make bench
+  ./bench
+
+  Verify absence of performance regressions. Repeat this step on every
+  available test platform.
+
+9. Proofread README.md and the man pages. Ensure that their content is
+   up-to-date.
+
+STEPS FOR ISSUING A RELEASE
+
+1. Create and push tag signed by the libaes_siv release signing key:
+
+  git tag -u 59F495D45538EB40 v<version>
+  git push --tags
+
+2. Via the GitHub UI, create a release associated with the tag.
+
+3. If the release contains security fixes, notify oss-security.
+
+4. Notify other interested parties.
