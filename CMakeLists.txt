@@ -48,6 +48,9 @@ if(ENABLE_SANITIZER)
   target_link_libraries(runtests "-fsanitize=${ENABLE_SANITIZER}")
 endif(ENABLE_SANITIZER)
 
+add_executable(bench EXCLUDE_FROM_ALL bench.c)
+target_link_libraries(bench aes_siv_static)
+
 install(TARGETS aes_siv LIBRARY DESTINATION lib)
 install(TARGETS aes_siv_static ARCHIVE DESTINATION lib)
 install(FILES aes_siv.h DESTINATION include)
