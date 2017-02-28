@@ -1,4 +1,5 @@
 cmake_minimum_required (VERSION 3.0)
+project(libaes_siv LANGUAGES C)
 set(CMAKE_C_STANDARD 99)
 set(CMAKE_CONFIGURATION_TYPESDebug Release RelWithDebInfo MinSizeRel)
 if("${CMAKE_BUILD_TYPE}" STREQUAL "")
