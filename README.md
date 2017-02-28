@@ -24,14 +24,31 @@ SIV mode also permits the nonce to be intentionally omitted, resulting
 in a [deterministic encryption
 scheme](https://en.wikipedia.org/wiki/Deterministic_encryption).
 
+Here are a couple common situations where AES-SIV may be an
+appropriate choice of AEAD scheme:
+
+1. You can't count on the system doing the encrypting to reliably
+   generate a unique nonce for every message. For example, the system
+   may be an embedded device with no good entropy source, or may be a
+   VM subject to be snapshotted and restored.
+
+2. You want your encryption to be deterministic so that an
+   intermediating party such as a caching proxy, provided only with
+   ciphertext, can perform deduplication.
+
 The drawback to SIV mode is that it requires two passes over its
 input. This makes it potentially clumsy for use with large messages
 since the entire message must be held in memory at one time. SIV mode
 is also a bit slower than most widely-used block cipher modes (but
 can still be quite fast — see performance numbers below).
 
-Keys for SIV mode are twice the length of the keys for the underlying
-block cipher. For example, keys for AES-128-SIV are 256 bits long,
+Be aware that with *any* encryption scheme, including SIV, repeating
+or omitting a nonce still be [fatal to security](https://xkcd.com/257)
+if your plaintexts have low entropy, e.g., if each message consists
+only of a single bit.
+
+KEYS FOR SIV MODE ARE TWICE THE LENGTH OF THE KEYS FOR THE UNDERLYING
+BLOCK CIPHER. FOR EXAMPLE, KEYS FOR AES-128-SIV are 256 bits long,
 and keys for AES-256-SIV are 512 bits long.
 
 ## Build instructions
