@@ -20,8 +20,6 @@ static int fail_allocation_counter = -1;
 static void* mock_malloc(size_t num) {
 #else
 static void* mock_malloc(size_t num, const char *file, int line) {
-	(void)file;
-	(void)line;
 #endif
         if(fail_allocation_counter < 0) {
                 return malloc(num);
@@ -29,7 +27,11 @@ static void* mock_malloc(size_t num, const char *file, int line) {
         if(fail_allocation_counter-- == 0) {
                 return NULL;
         }
+#if OPENSSL_VERSION_NUMBER < 0x10101000L
         return malloc(num);
+#else
+	return CRYPTO_malloc(num, file, line);
+#endif
 }
 /* This needs to be the first test case because CRYPTO_set_mem_functions()
    will fail once any allocations have happened.
@@ -38,7 +40,12 @@ static void test_malloc_failure() {
         int ret, i=0;
         AES_SIV_CTX *ctx;
 
-        ret = CRYPTO_set_mem_functions(mock_malloc, NULL, NULL);
+#if OPENSSL_VERSION_NUMBER < 0x10101000L	
+        ret = CRYPTO_set_mem_functions(mock_malloc, realloc, free);
+#else
+	ret = CRYPTO_set_mem_functions(mock_malloc, CRYPTO_realloc,
+				       CRYPTO_free);
+#endif
         assert(ret == 1);
 
         printf("Test allocation failure:\n" );
@@ -46,8 +53,8 @@ static void test_malloc_failure() {
         do {
                 fail_allocation_counter = i++;
         } while((ctx = AES_SIV_CTX_new()) == NULL);
-        assert(i > 0);
-        printf("AES_SIV_CTX_new() succeeds after %d successful allocations.\n", i);
+        assert(i > 1);
+        printf("AES_SIV_CTX_new() succeeds after %d successful allocations.\n", i-1);
         AES_SIV_CTX_free(ctx);
         fail_allocation_counter = -1;
 }
