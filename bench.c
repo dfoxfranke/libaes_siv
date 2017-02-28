@@ -114,8 +114,9 @@ call(fn fn, AES_SIV_CTX *ctx,
         struct timespec start, end;
         double rate;
         
-        printf("%3zd bit key, %2zd byte nonce, %5zd byte input, %5zd byte associated data: ",
-               key_len * 8, nonce_len, in_len, ad_len);
+        printf("%3u bit key, %2u byte nonce, %5u byte input, %5u byte associated data: ",
+               (unsigned)(key_len * 8), (unsigned)nonce_len,
+	       (unsigned)in_len, (unsigned)ad_len);
         fflush(stdout);
   
         alarm_rung = 0;
@@ -138,7 +139,7 @@ call(fn fn, AES_SIV_CTX *ctx,
         rate = (double)count /
                 ((double)(end.tv_sec) - (double)(start.tv_sec) +
                  ((double)end.tv_nsec - (double)start.tv_nsec)/1000000000.);
-        printf("%12.2lf calls/second (%11.2lf ns/call, %8.2lf MiB/s)\n",
+        printf("%12.2f calls/second (%11.2f ns/call, %8.2f MiB/s)\n",
                rate,
                1000000000./rate,
                scalbn(rate * (double)(ad_len + in_len),
