@@ -12,10 +12,17 @@
 #include <string.h>
 
 #include <openssl/crypto.h>
+#include <openssl/opensslv.h>
 
 static int fail_allocation_counter = -1;
 
+#if OPENSSL_VERSION_NUMBER < 0x10101000L
 static void* mock_malloc(size_t num) {
+#else
+static void* mock_malloc(size_t num, const char *file, int line) {
+	(void)file;
+	(void)line;
+#endif
         if(fail_allocation_counter < 0) {
                 return malloc(num);
         }
@@ -31,7 +38,7 @@ static void test_malloc_failure() {
         int ret, i=0;
         AES_SIV_CTX *ctx;
 
-        ret = CRYPTO_set_mem_functions(mock_malloc, realloc, free);
+        ret = CRYPTO_set_mem_functions(mock_malloc, NULL, NULL);
         assert(ret == 1);
 
         printf("Test allocation failure:\n" );
