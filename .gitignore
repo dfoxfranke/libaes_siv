@@ -9,7 +9,7 @@ runtests
 bench
 libaes_siv.a
 libaes_siv.so
-libaes_siv.so.1
+libaes_siv.so.*
 CMakeCache.txt
 CMakeFiles/
 *.cmake
