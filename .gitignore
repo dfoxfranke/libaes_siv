@@ -6,7 +6,7 @@
 *.gcno
 *.gcov
 runtests
-test-ct
+bench
 libaes_siv.a
 libaes_siv.so
 libaes_siv.so.1
