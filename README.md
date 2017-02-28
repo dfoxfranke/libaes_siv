@@ -47,8 +47,8 @@ or omitting a nonce can still be [fatal to
 security](https://xkcd.com/257) if your plaintexts have low entropy,
 e.g., if each message consists only of a single bit.
 
-KEYS FOR SIV MODE ARE TWICE THE LENGTH OF THE KEYS FOR THE UNDERLYING
-BLOCK CIPHER. FOR EXAMPLE, KEYS FOR AES-128-SIV are 256 bits long,
+Keys for SIV mode are twice the length of the keys for the underlying
+block cipher. For example, keys for AES-128-SIV are 256 bits long,
 and keys for AES-256-SIV are 512 bits long.
 
 ## Build instructions
