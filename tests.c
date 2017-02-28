@@ -15,6 +15,19 @@
 #include <openssl/evp.h>
 #include <openssl/opensslv.h>
 
+static void debug(const char *label, const unsigned char *hex, size_t len) {
+        size_t i;
+        printf("%16s: ", label);
+        for (i = 0; i < len; i++) {
+                if (i > 0 && i % 16 == 0)
+                        printf("\n                  ");
+                printf("%.2x", (int)hex[i]);
+                if (i > 0 && i % 4 == 3)
+                        printf(" ");
+        }
+        printf("\n");
+}
+
 static int fail_allocation_counter = -1;
 
 static void* mock_malloc(size_t num) {
@@ -72,18 +85,14 @@ static void test_malloc_failure() {
         fail_allocation_counter = -1;
 }
 
-static void debug(const char *label, const unsigned char *hex, size_t len) {
-        size_t i;
-        printf("%16s: ", label);
-        for (i = 0; i < len; i++) {
-                if (i > 0 && i % 16 == 0)
-                        printf("\n                  ");
-                printf("%.2x", (int)hex[i]);
-                if (i > 0 && i % 4 == 3)
-                        printf(" ");
-        }
-        printf("\n");
-}
+static void test_cleanup_before_free() {
+	printf("Test cleanup before free: ");
+	AES_SIV_CTX *ctx = AES_SIV_CTX_new();
+	assert(ctx != NULL);
+	AES_SIV_CTX_cleanup(ctx);
+	AES_SIV_CTX_free(ctx);
+	printf("OK\n");
+}	
 
 static void test_vector_1() {
         const unsigned char key[] = {
@@ -143,7 +152,6 @@ static void test_vector_1() {
         assert(ret == 1);
         assert(plaintext_len == sizeof plaintext);
         assert(!memcmp(plaintext, plaintext_out, plaintext_len));
-        AES_SIV_CTX_cleanup(ctx);
         AES_SIV_CTX_free(ctx);
 }
 
@@ -239,7 +247,6 @@ static void test_vector_2() {
         assert(ret == 1);
         debug("plaintext", plaintext_out, sizeof plaintext);
         assert(!memcmp(plaintext_out, plaintext, sizeof plaintext));
-        AES_SIV_CTX_cleanup(ctx);
         AES_SIV_CTX_free(ctx);
 }
 
@@ -304,7 +311,6 @@ static void test_384bit() {
         assert(ret == 1);
         assert(plaintext_len == sizeof plaintext);
         assert(!memcmp(plaintext, plaintext_out, plaintext_len));
-        AES_SIV_CTX_cleanup(ctx);
         AES_SIV_CTX_free(ctx);
 }
 
@@ -371,7 +377,6 @@ static void test_512bit() {
         assert(ret == 1);
         assert(plaintext_len == sizeof plaintext);
         assert(!memcmp(plaintext, plaintext_out, plaintext_len));
-        AES_SIV_CTX_cleanup(ctx);
         AES_SIV_CTX_free(ctx);
 }
 
@@ -430,7 +435,6 @@ static void test_highlevel_with_nonce() {
         assert(ret == 1);
         assert(plaintext_len == sizeof plaintext);
         assert(!memcmp(plaintext, plaintext_out, plaintext_len));
-        AES_SIV_CTX_cleanup(ctx);
         AES_SIV_CTX_free(ctx);
 }
 
@@ -505,9 +509,6 @@ static void test_copy() {
         assert(ret == 1);
         assert(memcmp(ciphertext, ciphertext2_out, sizeof ciphertext));
 
-        AES_SIV_CTX_cleanup(ctx1);
-        AES_SIV_CTX_cleanup(ctx2);
-        AES_SIV_CTX_cleanup(ctx3);
         AES_SIV_CTX_free(ctx1);
         AES_SIV_CTX_free(ctx2);
         AES_SIV_CTX_free(ctx3);
@@ -537,7 +538,6 @@ static void test_bad_key() {
         ret = AES_SIV_Init(ctx, key, sizeof key);
         assert(ret == 0);
 
-        AES_SIV_CTX_cleanup(ctx);
         AES_SIV_CTX_free(ctx);
         printf("OK\n");
 }
@@ -563,12 +563,12 @@ static void test_decrypt_failure() {
                               sizeof ciphertext, ad, sizeof ad);
         assert(ret == 0);
 
-        AES_SIV_CTX_cleanup(ctx);
         AES_SIV_CTX_free(ctx);
 }
 
 int main() {
         test_malloc_failure();
+	test_cleanup_before_free();
         test_vector_1();
         test_vector_2();
         test_384bit();
