@@ -43,9 +43,9 @@ is also a bit slower than most widely-used block cipher modes (but
 can still be quite fast — see performance numbers below).
 
 Be aware that with *any* encryption scheme, including SIV, repeating
-or omitting a nonce still be [fatal to security](https://xkcd.com/257)
-if your plaintexts have low entropy, e.g., if each message consists
-only of a single bit.
+or omitting a nonce can still be [fatal to
+security](https://xkcd.com/257) if your plaintexts have low entropy,
+e.g., if each message consists only of a single bit.
 
 KEYS FOR SIV MODE ARE TWICE THE LENGTH OF THE KEYS FOR THE UNDERLYING
 BLOCK CIPHER. FOR EXAMPLE, KEYS FOR AES-128-SIV are 256 bits long,
