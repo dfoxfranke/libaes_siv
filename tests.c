@@ -12,6 +12,40 @@
 #include <stdio.h>
 #include <string.h>
 
+#include <openssl/crypto.h>
+
+static int fail_allocation_counter = -1;
+
+static void* mock_malloc(size_t num) {
+	if(fail_allocation_counter < 0) {
+		return malloc(num);
+	}
+	if(fail_allocation_counter-- == 0) {
+		return NULL;
+	}
+	return malloc(num);
+}
+/* This needs to be the first test case because CRYPTO_set_mem_functions()
+   will fail once any allocations have happened.
+*/
+static void test_malloc_failure() {
+	int ret, i=0;
+	AES_SIV_CTX *ctx;
+
+	ret = CRYPTO_set_mem_functions(mock_malloc, realloc, free);
+	assert(ret == 1);
+
+	printf("Test allocation failure:\n" );
+
+	do {
+		fail_allocation_counter = i++;
+	} while((ctx = AES_SIV_CTX_new()) == NULL);
+	assert(i > 0);
+	printf("AES_SIV_CTX_new() succeeds after %d successful allocations.\n", i);
+	AES_SIV_CTX_free(ctx);
+	fail_allocation_counter = -1;
+}
+
 static void debug(const char *label, const unsigned char *hex, size_t len) {
         size_t i;
         printf("%16s: ", label);
@@ -508,6 +542,7 @@ static void test_decrypt_failure() {
 }
 
 int main() {
+	test_malloc_failure();
         test_vector_1();
         test_vector_2();
         test_384bit();

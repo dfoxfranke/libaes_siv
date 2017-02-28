@@ -130,7 +130,7 @@ static inline uint64_t bswap64(uint64_t x) {
 #endif
 
 static inline uint64_t getword(block const *block, size_t i) {
-#ifndef ENABLE_FORCE_WEIRD_ENDIAN
+#ifndef ENABLE_DEBUG_WEIRD_ENDIAN
         if (I_AM_BIG_ENDIAN) {
                 return block->word[i];
         } else if (I_AM_LITTLE_ENDIAN) {
@@ -146,13 +146,13 @@ static inline uint64_t getword(block const *block, size_t i) {
                        ((uint64_t)block->byte[i + 2] << 40) |
                        ((uint64_t)block->byte[i + 1] << 48) |
                        ((uint64_t)block->byte[i] << 56);
-#ifndef ENABLE_FORCE_WEIRD_ENDIAN
+#ifndef ENABLE_DEBUG_WEIRD_ENDIAN
         }
 #endif
 }
 
 static inline void putword(block *block, size_t i, uint64_t x) {
-#ifndef ENABLE_FORCE_WEIRD_ENDIAN
+#ifndef ENABLE_DEBUG_WEIRD_ENDIAN
         if (I_AM_BIG_ENDIAN) {
                 block->word[i] = x;
         } else if (I_AM_LITTLE_ENDIAN) {
@@ -168,7 +168,7 @@ static inline void putword(block *block, size_t i, uint64_t x) {
                 block->byte[i + 5] = (unsigned char)((x >> 16) & 0xff);
                 block->byte[i + 6] = (unsigned char)((x >> 8) & 0xff);
                 block->byte[i + 7] = (unsigned char)(x & 0xff);
-#ifndef ENABLE_FORCE_WEIRD_ENDIAN
+#ifndef ENABLE_DEBUG_WEIRD_ENDIAN
         }
 #endif
 }
@@ -397,7 +397,11 @@ static inline int do_s2v_p(AES_SIV_CTX *ctx, block *out,
 
 static inline int do_encrypt(EVP_CIPHER_CTX *ctx, unsigned char *out,
                              unsigned char const *in, size_t len, block *icv) {
+#ifdef ENABLE_DEBUG_TINY_CHUNK_SIZE
+	const int chunk_size = 7;
+#else
         const int chunk_size = 1 << 30;
+#endif
         size_t len_remaining = len;
         int out_len;
         int ret;
