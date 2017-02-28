@@ -42,6 +42,19 @@ rendering it uninitialized but still allocated.
 The *AES_SIV_CTX_free()* function frees the memory associated with
 `ctx`.
 
+NOTES
+-----
+
+AES_SIV_CTX_new() and AES_SIV_CTX_free() are the only functions in
+libaes_siv which allocate or free heap memory. They do by calling
+OPENSSL_malloc() and OPENSSL_free(), so they will make use of any
+custom allocators provided to OpenSSL via CRYPTO_set_mem_functions().
+
+AES_SIV_CTX_cleanup() will securely erase all heap data asociated with
+the AES_SIV_CTX. libaes_siv does not attempt to sanitize the stack
+since compiler behaviors such as register spilling make such attempts
+too unreliable to be worthwhile.
+
 RETURN VALUES
 -------------
 
