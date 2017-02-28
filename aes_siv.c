@@ -296,7 +296,7 @@ int AES_SIV_Init(AES_SIV_CTX *ctx, unsigned char const *key, size_t key_len) {
                                                 EVP_aes_256_ctr(),
                                                 NULL, key + 32, NULL) != 1)) {
                         goto done;
-                }               
+                }
                 break;
         default:
                 goto done;
@@ -398,7 +398,7 @@ static inline int do_s2v_p(AES_SIV_CTX *ctx, block *out,
 static inline int do_encrypt(EVP_CIPHER_CTX *ctx, unsigned char *out,
                              unsigned char const *in, size_t len, block *icv) {
 #ifdef ENABLE_DEBUG_TINY_CHUNK_SIZE
-	const int chunk_size = 7;
+        const int chunk_size = 7;
 #else
         const int chunk_size = 1 << 30;
 #endif
@@ -441,7 +441,7 @@ int AES_SIV_EncryptFinal(AES_SIV_CTX *ctx, unsigned char *v_out,
                 goto done;
         }
 
-	ct_unpoison(&q, sizeof q);
+        ct_unpoison(&q, sizeof q);
         memcpy(v_out, &q, 16);
         q.byte[8] &= 0x7f;
         q.byte[12] &= 0x7f;
@@ -491,7 +491,7 @@ int AES_SIV_DecryptFinal(AES_SIV_CTX *ctx, unsigned char *out,
         result = t.word[0] | t.word[1];
         ct_unpoison(&result, sizeof result);
         ret = !result;
-       
+
         if(ret) {
                 ct_unpoison(out, len);
         } else {
