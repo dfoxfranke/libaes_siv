@@ -108,6 +108,6 @@ externally-visible changes.
 As a result of this scheme, on ELF platforms, the .so version will
 be the same as the release version.
 
-Version numbers indicate nothing about code stability or maturity.  No
+Version numbers indicate nothing about code quality or maturity.  No
 code known or suspected to be less suitable for production use than
 previous releases will ever be tagged with a version number.
