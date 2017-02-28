@@ -12,27 +12,41 @@
 #include <string.h>
 
 #include <openssl/crypto.h>
+#include <openssl/evp.h>
 #include <openssl/opensslv.h>
 
 static int fail_allocation_counter = -1;
 
-#if OPENSSL_VERSION_NUMBER < 0x10101000L
 static void* mock_malloc(size_t num) {
-#else
-static void* mock_malloc(size_t num, const char *file, int line) {
-#endif
         if(fail_allocation_counter < 0) {
                 return malloc(num);
         }
         if(fail_allocation_counter-- == 0) {
                 return NULL;
         }
-#if OPENSSL_VERSION_NUMBER < 0x10101000L
         return malloc(num);
-#else
-	return CRYPTO_malloc(num, file, line);
-#endif
 }
+
+#if OPENSSL_VERSION_NUMBER >= 0x10100000L
+static void* mock_malloc_ex(size_t num, const char *file, int line) {
+	(void)file;
+	(void)line;
+	return mock_malloc(num);
+}
+
+static void *mock_realloc_ex(void *mem, size_t num, const char *file, int line) {
+	(void)file;
+	(void)line;
+	return realloc(mem, num);
+}
+
+static void mock_free_ex(void *mem, const char* file, int line) {
+	(void)file;
+	(void)line;
+	free(mem);
+}
+#endif
+
 /* This needs to be the first test case because CRYPTO_set_mem_functions()
    will fail once any allocations have happened.
 */
@@ -40,11 +54,10 @@ static void test_malloc_failure() {
         int ret, i=0;
         AES_SIV_CTX *ctx;
 
-#if OPENSSL_VERSION_NUMBER < 0x10101000L	
+#if OPENSSL_VERSION_NUMBER < 0x10100000L	
         ret = CRYPTO_set_mem_functions(mock_malloc, realloc, free);
 #else
-	ret = CRYPTO_set_mem_functions(mock_malloc, CRYPTO_realloc,
-				       CRYPTO_free);
+	ret = CRYPTO_set_mem_functions(mock_malloc_ex, mock_realloc_ex, mock_free_ex);
 #endif
         assert(ret == 1);
 

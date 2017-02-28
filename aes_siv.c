@@ -206,8 +206,19 @@ struct AES_SIV_CTX_st {
 
 void AES_SIV_CTX_cleanup(AES_SIV_CTX *ctx) {
         EVP_CIPHER_CTX_cleanup(ctx->cipher_ctx);
+#if OPENSSL_VERSION_NUMBER >= 0x10100000L && OPENSSL_VERSION_NUMBER <= 0x10100060L
+	/* Workaround for an OpenSSL bug that causes a double free
+	   if you call CMAC_CTX_cleanup() before CMAC_CTX_free().
+	   https://github.com/openssl/openssl/pull/2798
+	*/
+	CMAC_CTX_free(ctx->cmac_ctx_init);
+	ctx->cmac_ctx_init = CMAC_CTX_new();
+	CMAC_CTX_free(ctx->cmac_ctx);
+	ctx->cmac_ctx = CMAC_CTX_new();
+#else
         CMAC_CTX_cleanup(ctx->cmac_ctx_init);
         CMAC_CTX_cleanup(ctx->cmac_ctx);
+#endif
         OPENSSL_cleanse(&ctx->d, sizeof ctx->d);
 }
 
@@ -216,12 +227,13 @@ void AES_SIV_CTX_free(AES_SIV_CTX *ctx) {
                 EVP_CIPHER_CTX_free(ctx->cipher_ctx);
                 CMAC_CTX_free(ctx->cmac_ctx_init);
                 CMAC_CTX_free(ctx->cmac_ctx);
-                OPENSSL_free(ctx);
+		OPENSSL_cleanse(&ctx->d, sizeof ctx->d);
+                free(ctx);
         }
 }
 
 AES_SIV_CTX *AES_SIV_CTX_new() {
-        AES_SIV_CTX *ctx = OPENSSL_malloc(sizeof(struct AES_SIV_CTX_st));
+        AES_SIV_CTX *ctx = malloc(sizeof(struct AES_SIV_CTX_st));
         if (UNLIKELY(ctx == NULL)) {
                 return NULL;
         }
