@@ -5,6 +5,7 @@
 #include "aes_siv.h"
 
 #include <assert.h>
+#include <limits.h>
 #include <stddef.h>
 #include <stdint.h>
 #ifdef ENABLE_DEBUG_OUTPUT
