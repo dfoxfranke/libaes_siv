@@ -79,7 +79,8 @@ To build and install on POSIX-like platforms:
 ## Usage
 
 See the manual pages for API documentation, and the test vectors
-in `tests.c` for simple usage examples.
+in `tests.c` for simple usage examples.  You can also use the `demo` command
+line program to encrypt and decrypt data.
 
 ## Performance
 
