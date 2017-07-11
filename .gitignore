@@ -5,6 +5,7 @@
 *.gcda
 *.gcno
 *.gcov
+demo
 runtests
 bench
 libaes_siv.a
