@@ -35,6 +35,9 @@ add_library(aes_siv_static STATIC aes_siv.c)
 target_link_libraries(aes_siv_static ${OPENSSL_CRYPTO_LIBRARY})
 set_target_properties(aes_siv_static PROPERTIES OUTPUT_NAME aes_siv)
 
+add_executable(demo demo.c)
+target_link_libraries(demo ${OPENSSL_CRYPTO_LIBRARY} aes_siv_static)
+
 add_executable(runtests aes_siv_test.c tests.c)
 target_link_libraries(runtests ${OPENSSL_CRYPTO_LIBRARY})
 if(ENABLE_COVERAGE)
