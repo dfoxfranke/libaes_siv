@@ -206,7 +206,12 @@ struct AES_SIV_CTX_st {
 };
 
 void AES_SIV_CTX_cleanup(AES_SIV_CTX *ctx) {
+#if OPENSSL_VERSION_NUMBER >= 0x10100000L
+        EVP_CIPHER_CTX_reset(ctx->cipher_ctx);
+#else
         EVP_CIPHER_CTX_cleanup(ctx->cipher_ctx);
+#endif
+
 #if OPENSSL_VERSION_NUMBER >= 0x10100000L && OPENSSL_VERSION_NUMBER <= 0x10100060L
 	/* Workaround for an OpenSSL bug that causes a double free
 	   if you call CMAC_CTX_cleanup() before CMAC_CTX_free().
