@@ -25,20 +25,31 @@ endif(CMAKE_C_COMPILER_ID STREQUAL Clang OR CMAKE_C_COMPILER_ID STREQUAL AppleCl
 find_package(OpenSSL 1.0.1 REQUIRED COMPONENTS Crypto)
 find_program(A2X a2x)
 
+# fix linking to OpenSSL on OsX.
+# The system OpenSSL libraries in /usr/lib/ don't have any header files
+# installed. We'll use a OpenSSL library installed with homebrew.
+if("${CMAKE_SYSTEM_NAME}" STREQUAL "Darwin")
+set(OPENSSL_CRYPTO_LIBRARY "-L/usr/local/opt/openssl/lib -lcrypto")
+endif("${CMAKE_SYSTEM_NAME}" STREQUAL "Darwin")
+
 configure_file(config.h.in config.h)
 
 add_library(aes_siv SHARED aes_siv.c)
+target_compile_options(aes_siv PUBLIC -I${OPENSSL_INCLUDE_DIR})
 target_link_libraries(aes_siv ${OPENSSL_CRYPTO_LIBRARY})
 set_target_properties(aes_siv PROPERTIES VERSION "1.0.0" SOVERSION 1)
 
 add_library(aes_siv_static STATIC aes_siv.c)
+target_compile_options(aes_siv_static PUBLIC -I${OPENSSL_INCLUDE_DIR})
 target_link_libraries(aes_siv_static ${OPENSSL_CRYPTO_LIBRARY})
 set_target_properties(aes_siv_static PROPERTIES OUTPUT_NAME aes_siv)
 
 add_executable(demo demo.c)
+target_compile_options(demo PUBLIC -I${OPENSSL_INCLUDE_DIR})
 target_link_libraries(demo ${OPENSSL_CRYPTO_LIBRARY} aes_siv_static)
 
 add_executable(runtests aes_siv_test.c tests.c)
+target_compile_options(runtests PUBLIC -I${OPENSSL_INCLUDE_DIR})
 target_link_libraries(runtests ${OPENSSL_CRYPTO_LIBRARY})
 if(ENABLE_COVERAGE)
   target_compile_options(runtests PRIVATE "--coverage")
