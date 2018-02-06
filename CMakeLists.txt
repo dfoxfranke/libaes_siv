@@ -25,13 +25,6 @@ endif(CMAKE_C_COMPILER_ID STREQUAL Clang OR CMAKE_C_COMPILER_ID STREQUAL AppleCl
 find_package(OpenSSL 1.0.1 REQUIRED COMPONENTS Crypto)
 find_program(A2X a2x)
 
-# fix linking to OpenSSL on OsX.
-# The system OpenSSL libraries in /usr/lib/ don't have any header files
-# installed. We'll use a OpenSSL library installed with homebrew.
-if("${CMAKE_SYSTEM_NAME}" STREQUAL "Darwin")
-set(OPENSSL_CRYPTO_LIBRARY "-L/usr/local/opt/openssl/lib -lcrypto")
-endif("${CMAKE_SYSTEM_NAME}" STREQUAL "Darwin")
-
 configure_file(config.h.in config.h)
 
 add_library(aes_siv SHARED aes_siv.c)

@@ -9,9 +9,6 @@
 #include "aes_siv.h"
 #include <assert.h>
 #include <errno.h>
-#ifdef __linux__
-#include <malloc.h>
-#endif
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>

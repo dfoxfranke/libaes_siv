@@ -81,7 +81,7 @@ environment and the command line tools, then use the Homebrew package
 manager https://brew.sh/ to install cmake and OpenSSL:
 ```
     brew install cmake openssl
-    OPENSSL_ROOT_DIR=/usr/local/opt/openssl cmake .
+    cmake -DCMAKE_PREFIX_PATH=/usr/local/opt/openssl .
     make
     make test
     sudo make install
