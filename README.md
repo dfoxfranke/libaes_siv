@@ -76,6 +76,17 @@ To build and install on POSIX-like platforms:
     sudo make install
 ```
 
+If you want to build on a OsX machine, install the Xcode development
+environment and the command line tools, then use the Homebrew package
+manager https://brew.sh/ to install cmake and OpenSSL:
+```
+    brew install cmake openssl
+    cmake -DCMAKE_PREFIX_PATH=/usr/local/opt/openssl .
+    make
+    make test
+    sudo make install
+```
+
 ## Usage
 
 See the manual pages for API documentation, and the test vectors
