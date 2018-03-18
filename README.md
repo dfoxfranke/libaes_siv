@@ -1,10 +1,11 @@
 # libaes_siv
 
 This is an [RFC5297](https://tools.ietf.org/html/rfc5297)-compliant C
-implementation of AES-SIV, written by Daniel Franke on behalf of
-[Akamai Technologies](https://www.akamai.com) and published under the
-[Apache License (v2.0)](https://www.apache.org/licenses/LICENSE-2.0).
-It uses OpenSSL for the underlying
+implementation of AES-SIV written by Daniel Franke, formerly on behalf
+of [Akamai Technologies](https://www.akamai.com) and now independently
+maintained. It is published under the [Apache License
+(v2.0)](https://www.apache.org/licenses/LICENSE-2.0).  It uses OpenSSL
+for the underlying
 [AES](https://en.wikipedia.org/wiki/Advanced_Encryption_Standard) and
 [CMAC](https://en.wikipedia.org/wiki/One-key_MAC) implementations and
 follows a similar interface style.
