@@ -26,6 +26,7 @@ find_package(OpenSSL 1.0.1 REQUIRED COMPONENTS Crypto)
 find_program(A2X a2x)
 
 configure_file(config.h.in config.h)
+include_directories(${CMAKE_CURRENT_BINARY_DIR})
 
 add_library(aes_siv SHARED aes_siv.c)
 target_link_libraries(aes_siv ${OPENSSL_CRYPTO_LIBRARY})
@@ -77,19 +78,19 @@ add_custom_command(
          ${CMAKE_CURRENT_BINARY_DIR}/AES_SIV_CTX_copy.3
 	 ${CMAKE_CURRENT_BINARY_DIR}/AES_SIV_CTX_cleanup.3
 	 ${CMAKE_CURRENT_BINARY_DIR}/AES_SIV_CTX_free.3
-  COMMAND "${A2X}" ARGS -f manpage ${CMAKE_CURRENT_SOURCE_DIR}/AES_SIV_CTX_new.adoc
+  COMMAND "${A2X}" ARGS -f manpage -D ${CMAKE_CURRENT_BINARY_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/AES_SIV_CTX_new.adoc
   MAIN_DEPENDENCY ${CMAKE_CURRENT_SOURCE_DIR}/AES_SIV_CTX_new.adoc)
 add_custom_command(
   OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/AES_SIV_Init.3
          ${CMAKE_CURRENT_BINARY_DIR}/AES_SIV_AssociateData.3
 	 ${CMAKE_CURRENT_BINARY_DIR}/AES_SIV_EncryptFinal.3
 	 ${CMAKE_CURRENT_BINARY_DIR}/AES_SIV_DecryptFinal.3
-  COMMAND "${A2X}" ARGS -f manpage ${CMAKE_CURRENT_SOURCE_DIR}/AES_SIV_Init.adoc
+  COMMAND "${A2X}" ARGS -f manpage -D ${CMAKE_CURRENT_BINARY_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/AES_SIV_Init.adoc
   MAIN_DEPENDENCY ${CMAKE_CURRENT_SOURCE_DIR}/AES_SIV_Init.adoc)
 add_custom_command(
   OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/AES_SIV_Encrypt.3
          ${CMAKE_CURRENT_BINARY_DIR}/AES_SIV_Decrypt.3
-  COMMAND "${A2X}" ARGS -f manpage ${CMAKE_CURRENT_SOURCE_DIR}/AES_SIV_Encrypt.adoc
+  COMMAND "${A2X}" ARGS -f manpage -D ${CMAKE_CURRENT_BINARY_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/AES_SIV_Encrypt.adoc
   MAIN_DEPENDENCY ${CMAKE_CURRENT_SOURCE_DIR}/AES_SIV_Encrypt.adoc)
 
 install(FILES
