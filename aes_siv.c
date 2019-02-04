@@ -85,7 +85,7 @@ static void debug(const char *label, const unsigned char *hex, size_t len) {
 typedef union block_un {
         uint64_t word[2];
         unsigned char byte[16];
-} block;
+} block_t;
 
 const union {
         uint64_t word;
@@ -129,7 +129,7 @@ static inline uint64_t bswap64(uint64_t x) {
 }
 #endif
 
-static inline uint64_t getword(block const *block, size_t i) {
+static inline uint64_t getword(block_t const *block, size_t i) {
 #ifndef ENABLE_DEBUG_WEIRD_ENDIAN
         if (I_AM_BIG_ENDIAN) {
                 return block->word[i];
@@ -151,7 +151,7 @@ static inline uint64_t getword(block const *block, size_t i) {
 #endif
 }
 
-static inline void putword(block *block, size_t i, uint64_t x) {
+static inline void putword(block_t *block, size_t i, uint64_t x) {
 #ifndef ENABLE_DEBUG_WEIRD_ENDIAN
         if (I_AM_BIG_ENDIAN) {
                 block->word[i] = x;
@@ -173,7 +173,7 @@ static inline void putword(block *block, size_t i, uint64_t x) {
 #endif
 }
 
-static inline void xorblock(block *x, block const *y) {
+static inline void xorblock(block_t *x, block_t const *y) {
         x->word[0] ^= y->word[0];
         x->word[1] ^= y->word[1];
 }
@@ -181,7 +181,7 @@ static inline void xorblock(block *x, block const *y) {
 /* Doubles `block`, which is 16 bytes representing an element
    of GF(2**128) modulo the irreducible polynomial
    x**128 + x**7 + x**2 + x + 1. */
-static inline void dbl(block *block) {
+static inline void dbl(block_t *block) {
         uint64_t high = getword(block, 0);
         uint64_t low = getword(block, 1);
         uint64_t high_carry = high & (((uint64_t)1) << 63);
@@ -198,7 +198,7 @@ static inline void dbl(block *block) {
 struct AES_SIV_CTX_st {
         /* d stores intermediate results of S2V; it corresponds to D from the
            pseudocode in section 2.4 of RFC 5297. */
-        block d;
+        block_t d;
         EVP_CIPHER_CTX *cipher_ctx;
         /* SIV_AES_Init() sets up cmac_ctx_init. cmac_ctx is a scratchpad used
            by SIV_AES_AssociateData() and SIV_AES_(En|De)cryptFinal. */
@@ -238,7 +238,7 @@ void AES_SIV_CTX_free(AES_SIV_CTX *ctx) {
         }
 }
 
-AES_SIV_CTX *AES_SIV_CTX_new() {
+AES_SIV_CTX *AES_SIV_CTX_new(void) {
         AES_SIV_CTX *ctx = malloc(sizeof(struct AES_SIV_CTX_st));
         if (UNLIKELY(ctx == NULL)) {
                 return NULL;
@@ -274,7 +274,7 @@ int AES_SIV_CTX_copy(AES_SIV_CTX *dst, AES_SIV_CTX const *src) {
 }
 
 int AES_SIV_Init(AES_SIV_CTX *ctx, unsigned char const *key, size_t key_len) {
-        const static unsigned char zero[] = {0, 0, 0, 0, 0, 0, 0, 0,
+        static const unsigned char zero[] = {0, 0, 0, 0, 0, 0, 0, 0,
                                              0, 0, 0, 0, 0, 0, 0, 0};
         size_t out_len;
         int ret = 0;
@@ -339,7 +339,7 @@ int AES_SIV_Init(AES_SIV_CTX *ctx, unsigned char const *key, size_t key_len) {
 
 int AES_SIV_AssociateData(AES_SIV_CTX *ctx, unsigned char const *data,
                           size_t len) {
-        block cmac_out;
+        block_t cmac_out;
         size_t out_len = sizeof cmac_out;
         int ret = 0;
 
@@ -369,9 +369,9 @@ done:
         return ret;
 }
 
-static inline int do_s2v_p(AES_SIV_CTX *ctx, block *out,
+static inline int do_s2v_p(AES_SIV_CTX *ctx, block_t *out,
                            unsigned char const* in, size_t len) {
-        block t;
+        block_t t;
         size_t out_len = sizeof out->byte;
 
         if (UNLIKELY(CMAC_CTX_copy(ctx->cmac_ctx, ctx->cmac_ctx_init) != 1)) {
@@ -413,7 +413,7 @@ static inline int do_s2v_p(AES_SIV_CTX *ctx, block *out,
 }
 
 static inline int do_encrypt(EVP_CIPHER_CTX *ctx, unsigned char *out,
-                             unsigned char const *in, size_t len, block *icv) {
+                             unsigned char const *in, size_t len, block_t *icv) {
 #ifdef ENABLE_DEBUG_TINY_CHUNK_SIZE
         const int chunk_size = 7;
 #else
@@ -449,7 +449,7 @@ static inline int do_encrypt(EVP_CIPHER_CTX *ctx, unsigned char *out,
 int AES_SIV_EncryptFinal(AES_SIV_CTX *ctx, unsigned char *v_out,
                          unsigned char *c_out, unsigned char const *plaintext,
                          size_t len) {
-        block q;
+        block_t q;
         int ret = 0;
 
         ct_poison(plaintext, len);
@@ -481,7 +481,7 @@ done:
 int AES_SIV_DecryptFinal(AES_SIV_CTX *ctx, unsigned char *out,
                          unsigned char const *v, unsigned char const *c,
                          size_t len) {
-        block t, q;
+        block_t t, q;
         size_t i;
         uint64_t result;
         int ret = 0;
