@@ -238,7 +238,7 @@ void AES_SIV_CTX_free(AES_SIV_CTX *ctx) {
         }
 }
 
-AES_SIV_CTX *AES_SIV_CTX_new() {
+AES_SIV_CTX *AES_SIV_CTX_new(void) {
         AES_SIV_CTX *ctx = malloc(sizeof(struct AES_SIV_CTX_st));
         if (UNLIKELY(ctx == NULL)) {
                 return NULL;
@@ -274,7 +274,7 @@ int AES_SIV_CTX_copy(AES_SIV_CTX *dst, AES_SIV_CTX const *src) {
 }
 
 int AES_SIV_Init(AES_SIV_CTX *ctx, unsigned char const *key, size_t key_len) {
-        const static unsigned char zero[] = {0, 0, 0, 0, 0, 0, 0, 0,
+        static const unsigned char zero[] = {0, 0, 0, 0, 0, 0, 0, 0,
                                              0, 0, 0, 0, 0, 0, 0, 0};
         size_t out_len;
         int ret = 0;

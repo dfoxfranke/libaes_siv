@@ -59,7 +59,7 @@ int load_file(const char *filename, unsigned char **buf, size_t *len)
   return -1;
 }
 
-void help()
+void help(void)
 {
     fprintf(stderr, "usage: aes_siv_test [-d] <key file> <ad file> [nonce file]\n");
     fprintf(stderr, "This program encrypts or decrypts STDIN to STDOUT using the AES-SIV algorithm.\n");

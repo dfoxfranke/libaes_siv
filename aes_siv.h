@@ -22,7 +22,7 @@ extern "C" {
 
 typedef struct AES_SIV_CTX_st AES_SIV_CTX;
 
-AES_SIV_CTX *AES_SIV_CTX_new();
+AES_SIV_CTX *AES_SIV_CTX_new(void);
 int AES_SIV_CTX_copy(AES_SIV_CTX *dst, AES_SIV_CTX const *src);
 void AES_SIV_CTX_cleanup(AES_SIV_CTX *ctx);
 void AES_SIV_CTX_free(AES_SIV_CTX *ctx);

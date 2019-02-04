@@ -63,7 +63,7 @@ static void mock_free_ex(void *mem, const char* file, int line) {
 /* This needs to be the first test case because CRYPTO_set_mem_functions()
    will fail once any allocations have happened.
 */
-static void test_malloc_failure() {
+static void test_malloc_failure(void) {
         int ret, i=0;
         AES_SIV_CTX *ctx;
 
@@ -85,7 +85,7 @@ static void test_malloc_failure() {
         fail_allocation_counter = -1;
 }
 
-static void test_cleanup_before_free() {
+static void test_cleanup_before_free(void) {
 	printf("Test cleanup before free: ");
 	AES_SIV_CTX *ctx = AES_SIV_CTX_new();
 	assert(ctx != NULL);
@@ -94,7 +94,7 @@ static void test_cleanup_before_free() {
 	printf("OK\n");
 }	
 
-static void test_vector_1() {
+static void test_vector_1(void) {
         const unsigned char key[] = {
                 0xff, 0xfe, 0xfd, 0xfc, 0xfb, 0xfa, 0xf9, 0xf8,
                 0xf7, 0xf6, 0xf5, 0xf4, 0xf3, 0xf2, 0xf1, 0xf0,
@@ -155,7 +155,7 @@ static void test_vector_1() {
         AES_SIV_CTX_free(ctx);
 }
 
-static void test_vector_2() {
+static void test_vector_2(void) {
         const unsigned char key[] = {
                 0x7f, 0x7e, 0x7d, 0x7c, 0x7b, 0x7a, 0x79, 0x78,
                 0x77, 0x76, 0x75, 0x74, 0x73, 0x72, 0x71, 0x70,
@@ -250,7 +250,7 @@ static void test_vector_2() {
         AES_SIV_CTX_free(ctx);
 }
 
-static void test_384bit() {
+static void test_384bit(void) {
         const unsigned char key[] = {
                 0xff, 0xfe, 0xfd, 0xfc, 0xfb, 0xfa, 0xf9, 0xf8,
                 0xf7, 0xf6, 0xf5, 0xf4, 0xf3, 0xf2, 0xf1, 0xf0,
@@ -314,7 +314,7 @@ static void test_384bit() {
         AES_SIV_CTX_free(ctx);
 }
 
-static void test_512bit() {
+static void test_512bit(void) {
         const unsigned char key[] = {
                 0xff, 0xfe, 0xfd, 0xfc, 0xfb, 0xfa, 0xf9, 0xf8,
                 0xf7, 0xf6, 0xf5, 0xf4, 0xf3, 0xf2, 0xf1, 0xf0,
@@ -380,7 +380,7 @@ static void test_512bit() {
         AES_SIV_CTX_free(ctx);
 }
 
-static void test_highlevel_with_nonce() {
+static void test_highlevel_with_nonce(void) {
         const unsigned char key[] = {
                 0xff, 0xfe, 0xfd, 0xfc, 0xfb, 0xfa, 0xf9, 0xf8,
                 0xf7, 0xf6, 0xf5, 0xf4, 0xf3, 0xf2, 0xf1, 0xf0,
@@ -438,7 +438,7 @@ static void test_highlevel_with_nonce() {
         AES_SIV_CTX_free(ctx);
 }
 
-static void test_copy() {
+static void test_copy(void) {
         const unsigned char key[] = {
                 0xff, 0xfe, 0xfd, 0xfc, 0xfb, 0xfa, 0xf9, 0xf8,
                 0xf7, 0xf6, 0xf5, 0xf4, 0xf3, 0xf2, 0xf1, 0xf0,
@@ -514,7 +514,7 @@ static void test_copy() {
         AES_SIV_CTX_free(ctx3);
 }
 
-static void test_bad_key() {
+static void test_bad_key(void) {
         static const unsigned char key[40];
         static const unsigned char ad[16];
         static const unsigned char plaintext[16];
@@ -542,7 +542,7 @@ static void test_bad_key() {
         printf("OK\n");
 }
 
-static void test_decrypt_failure() {
+static void test_decrypt_failure(void) {
         static const unsigned char key[32];
         static const unsigned char ad[16];
         static const unsigned char ciphertext[32];
@@ -566,7 +566,7 @@ static void test_decrypt_failure() {
         AES_SIV_CTX_free(ctx);
 }
 
-int main() {
+int main(void) {
         test_malloc_failure();
 	test_cleanup_before_free();
         test_vector_1();
