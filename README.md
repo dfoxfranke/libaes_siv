@@ -63,7 +63,9 @@ Build dependencies:
 * [CMake](https://cmake.org) >= 3.0
 * [OpenSSL](https://openssl.org) >=1.0.1 (libcrypto only). A more
   recent version is of course recommended since 1.0.1 is out of
-  security support.
+  security support. LibreSSL *may* work but is not supported and
+  the test suite is known to fail. Please don't file LibreSSL-related
+  issues.
 * [Asciidoc](http://asciidoc.org) (only required for building man pages)
 
 Running benchmarks requires a POSIX.1-2001 compliant OS, including
