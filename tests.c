@@ -1,6 +1,8 @@
 /* Copyright (c) 2017-2019 Akamai Technologies, Inc.
  * SPDX-License-Identifier: Apache-2.0
  */
+#define _ANSI_SOURCE 1
+#define _ISOC99_SOURCE 1
 
 #include "config.h"
 #include "aes_siv.h"
