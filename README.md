@@ -10,6 +10,11 @@ for the underlying
 [CMAC](https://en.wikipedia.org/wiki/One-key_MAC) implementations and
 follows a similar interface style.
 
+An AES_SIV implementation forked from libaes_siv has been [merged into
+the OpenSSL master branch](https://github.com/openssl/openssl/pull/3540).
+However, the two implementations are not API-compatible; see section
+"OpenSSL API Comparison" below.
+
 ## Overview of SIV mode
 
 Synthetic Initialization Vector (SIV) mode is a [block cipher mode of
@@ -110,6 +115,24 @@ Then to build `libaes_siv`, run
 See the manual pages for API documentation, and the test vectors
 in `tests.c` for simple usage examples.  You can also use the `demo` command
 line program to encrypt and decrypt data.
+
+## OpenSSL API Comparison
+
+In December 2018, OpenSSL merged an AES-SIV implementation derived
+from libaes_siv. As of February 2019 this implementation has not been
+released yet; it will appear some time post-1.1.1. However, despite
+the two implementations' common ancestry, they are not API-compatible.
+The OpenSSL team had to make an ugly-but-necessary compromise into order
+to shoehorn SIV mode into OpenSSL's EVP API, which is a streaming API
+that was never designed to support SIV's two-pass operation. When used for
+SIV operations, the EVP API is forced to return an error if you invoke
+`EVP_(En|De)crypt_Update` more than once for the same message.
+
+When designing libaes_siv, I rejected this behavior as an unacceptable
+breakdown of the API contract and opted to dispense with the EVP
+abstraction altogether rather than permit it to leak. libaes_siv's API
+remains stylistically similar to EVP, but is nonetheless distinct and
+avoids the above pitfall.
 
 ## Performance
 
