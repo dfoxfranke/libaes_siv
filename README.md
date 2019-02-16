@@ -90,6 +90,21 @@ manager https://brew.sh/ to install cmake and OpenSSL:
     sudo make install
 ```
 
+To create a native Windows build, you will first need to build
+OpenSSL.  Install Visual Studio, CMake, ActiveState Perl, and NASM, and
+ensure that `nasm.exe` is somewhere in your `%PATH%`. From a VS developer
+command prompt, unpack the OpenSSL sources and run
+```
+    perl Configure VC-WIN64A
+    nmake
+```
+Then to build `libaes_siv`, run
+```
+    cmake -G "NMake Makefiles" -DOPENSSL_ROOT_DIR=\path\to\openssl .
+    nmake
+    nmake test
+```
+
 ## Usage
 
 See the manual pages for API documentation, and the test vectors
