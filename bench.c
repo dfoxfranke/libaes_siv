@@ -95,6 +95,7 @@ static const struct {
 
 static volatile int alarm_rung;
 static void alarm_handler(int num) {
+  (void)num;
   alarm_rung = 1;
 }
 
@@ -146,7 +147,7 @@ call(fn fn, AES_SIV_CTX *ctx,
                       -20));
 }
 
-int main() {
+int main(void) {
         size_t i;
         struct sigaction act;
         AES_SIV_CTX *ctx = AES_SIV_CTX_new();
