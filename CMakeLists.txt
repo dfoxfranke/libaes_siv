@@ -32,7 +32,7 @@ include_directories(${CMAKE_CURRENT_BINARY_DIR})
 add_library(aes_siv SHARED aes_siv.c)
 target_include_directories(aes_siv PUBLIC ${OPENSSL_INCLUDE_DIR})
 target_link_libraries(aes_siv ${OPENSSL_CRYPTO_LIBRARY})
-set_target_properties(aes_siv PROPERTIES VERSION "1.0.0" SOVERSION 1)
+set_target_properties(aes_siv PROPERTIES VERSION "1.0.1" SOVERSION 1)
 
 add_library(aes_siv_static STATIC aes_siv.c)
 target_include_directories(aes_siv_static PUBLIC ${OPENSSL_INCLUDE_DIR})
