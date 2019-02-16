@@ -66,9 +66,9 @@ STEPS BEFORE TAGGING A RELEASE
 
 STEPS FOR ISSUING A RELEASE
 
-1. Create and push tag signed by the libaes_siv release signing key:
+1. Create and push a release tag:
 
-  git tag -u 59F495D45538EB40 v<version>
+  git tag v<version>
   git push --tags
 
 2. Via the GitHub UI, create a release associated with the tag.

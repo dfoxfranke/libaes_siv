@@ -163,7 +163,8 @@ expert C programmers.
 ## Bugs and pull requests
 
 Use the GitHub issue tracker. For reporting sensitive security issues,
-use the [author's PGP key](https://www.dfranke.us/contact.html).
+contact the author directly. (Note: I no longer use PGP. Please
+request my Signal details if necessary).
 
 ## A note on version numbers
 
