@@ -83,10 +83,10 @@ If you want to build on an OS X machine, install the Xcode development
 environment and the command line tools, then use the Homebrew package
 manager https://brew.sh/ to install cmake and OpenSSL:
 ```
-    brew install cmake openssl
-    cmake -DCMAKE_PREFIX_PATH=/usr/local/opt/openssl .
-    make
-    make test
+    brew install cmake openssl &&
+    cmake -DCMAKE_PREFIX_PATH=/usr/local/opt/openssl . &&
+    make &&
+    make test &&
     sudo make install
 ```
 
