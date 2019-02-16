@@ -14,6 +14,10 @@
 #ifdef ENABLE_DEBUG_OUTPUT
 #include <stdio.h>
 #endif
+#ifdef _MSC_VER
+/* For _byteswap_uint64 */
+#include <stdlib.h>
+#endif
 #include <string.h>
 
 #include <openssl/cmac.h>
@@ -116,7 +120,7 @@ const union {
 #if defined(__GNUC__) || defined(__clang__)
 static inline uint64_t bswap64(uint64_t x) { return __builtin_bswap64(x); }
 #elif defined(_MSC_VER)
-static inline uint64_t bswap64(uint64_t x) { return __byteswap_uint64(x); }
+static inline uint64_t bswap64(uint64_t x) { return _byteswap_uint64(x); }
 #else
 
 static inline uint32_t rotl(uint32_t x) { return (x << 8) | (x >> 24); }
