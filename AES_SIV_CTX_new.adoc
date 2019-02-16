@@ -28,7 +28,7 @@ DESCRIPTION
 An *AES_SIV_CTX* is an opaque structure which holds context for
 AES-SIV operations.  A single +AES_SIV_CTX+ may be allocated and used
 repeatedly for multiple operations, so long as it is only used for one
-operation a time.
+operation at a time.
 
 The *AES_SIV_CTX_new()* function allocates and returns a new,
 uninitialized +AES_SIV_CTX+.
@@ -46,7 +46,7 @@ NOTES
 -----
 
 AES_SIV_CTX_new() and AES_SIV_CTX_free() are the only functions in
-libaes_siv which allocate or free heap memory. They do by calling
+libaes_siv which allocate or free heap memory. They do so by calling
 OPENSSL_malloc() and OPENSSL_free(), so they will make use of any
 custom allocators provided to OpenSSL via CRYPTO_set_mem_functions().
 
