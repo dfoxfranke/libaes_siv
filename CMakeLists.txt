@@ -22,7 +22,9 @@ set(CMAKE_C_FLAGS_MINSIZEREL "-Wall -Wextra -Wstrict-prototypes -Wconversion -Os
 endif(CMAKE_C_COMPILER_ID STREQUAL Clang OR CMAKE_C_COMPILER_ID STREQUAL AppleClang)
 
 find_package(OpenSSL 1.0.1 REQUIRED COMPONENTS Crypto)
-find_program(A2X a2x)
+if(NOT DISABLE_DOCS)
+  find_program(A2X a2x)
+endif(NOT DISABLE_DOCS)
 
 configure_file(config.h.in config.h)
 include_directories(${CMAKE_CURRENT_BINARY_DIR})
