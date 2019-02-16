@@ -61,11 +61,11 @@ Build dependencies:
   must define `uint64_t`. `char` must be 8 bits and arithmetic must be
   two's complement.
 * [CMake](https://cmake.org) >= 3.1
-* [OpenSSL](https://openssl.org) >=1.0.1 (libcrypto only). A more
-  recent version is of course recommended since 1.0.1 is out of
-  security support. LibreSSL *may* work but is not supported and
-  the test suite is known to fail. Please don't file LibreSSL-related
-  issues.
+* [OpenSSL](https://openssl.org) >=1.0.1 (libcrypto only). A recent
+  release from the 1.0.2 branch or later is strongly recommended since
+  1.0.1 was EOL'ed at the end of 2016. Furthermore, OpenSSL versions prior
+  to 1.0.1n and 1.0.2b have known bugs which impact `libaes_siv` and
+  will cause failures in its test suite. LibreSSL is not supported.
 * [Asciidoc](http://asciidoc.org) (only required for building man pages)
 
 Running benchmarks requires a POSIX.1-2001 compliant OS, including
