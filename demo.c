@@ -78,12 +78,11 @@ static int load_file(const char *filename, unsigned char **buf, size_t *len)
 void help(void)
 {
   fprintf(stderr, "Usage: aes_siv_test [-d] <key file> <ad file> [nonce file]\n");
-    fprintf(stderr, "This program encrypts or decrypts STDIN to STDOUT using the AES-SIV algorithm.\n");
-    fprintf(stderr, "-d           Decrypt STDIN, by default STDIN is encrypted\n");
-    fprintf(stderr, "<key file>   Filename which is read for key data, must have a size of 32, 48, 64 bytes.\n");
-    fprintf(stderr, "<ad file>    Filename which is used for associate data. Can have any size.\n");
-    fprintf(stderr, "[nonce file] Optional filename which is used for nonce data. Can have any size.\n");
-    exit(EXIT_FAILURE);
+  fprintf(stderr, "This program encrypts or decrypts STDIN to STDOUT using the AES-SIV algorithm.\n");
+  fprintf(stderr, "-d           Decrypt STDIN, by default STDIN is encrypted\n");
+  fprintf(stderr, "<key file>   Filename which is read for key data, must have a size of 32, 48, 64 bytes.\n");
+  fprintf(stderr, "<ad file>    Filename which is used for associate data. Can have any size.\n");
+  fprintf(stderr, "[nonce file] Optional filename which is used for nonce data. Can have any size.\n");
 }
 
 int main(int argc, char const* argv[])
@@ -123,6 +122,7 @@ int main(int argc, char const* argv[])
   {
     fprintf(stderr, "Missing key filename\n\n");
     help();
+    goto fail;
   }
   key_file = argv[arg++];
 
@@ -130,6 +130,7 @@ int main(int argc, char const* argv[])
   {
     fprintf(stderr, "Missing associate data filename\n\n");
     help();
+    goto fail;
   }
   ad_file = argv[arg++];
 
@@ -142,13 +143,14 @@ int main(int argc, char const* argv[])
   {
     fprintf(stderr, "Unknown command line argument: %s\n\n", argv[arg]);
     help();
+    goto fail;
   }
 
   /* Load files */
   if(load_file(key_file, &key, &key_len) < 0)
   {
     fprintf(stderr, "Could not load key file %s : %s\n", key_file, strerror(errno));
-    return EXIT_FAILURE;
+    goto fail;
   }
 
   assert(key != NULL);
@@ -157,20 +159,20 @@ int main(int argc, char const* argv[])
         key_len == 64))
   {
     fprintf(stderr, "Invalid key length %zu bytes, must be one of 32, 48, or 64\n", key_len);
-    return EXIT_FAILURE;
+    goto fail;
   }
   
   if(load_file(ad_file, &ad, &ad_len) < 0)
   {
     fprintf(stderr, "Could not load associated data file %s : %s\n", ad_file, strerror(errno));
-    return EXIT_FAILURE;
+    goto fail;
   }
   assert(ad);
   assert(ad_len > 0);
   if(load_file(nonce_file, &nonce, &nonce_len) < 0)
   {
     fprintf(stderr, "could not load nonce file %s : %s\n", nonce_file, strerror(errno));
-    return EXIT_FAILURE;
+    goto fail;
   }
 
   /* Read all of STDIN */
@@ -187,7 +189,7 @@ int main(int argc, char const* argv[])
         if(plaintext == NULL)
         {
           perror("realloc");
-          return EXIT_FAILURE;
+          goto fail;
         }
       }
       assert(plaintext_len + r <= plaintext_allocated);
