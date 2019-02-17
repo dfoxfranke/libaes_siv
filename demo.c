@@ -179,18 +179,20 @@ int main(int argc, char const* argv[])
   while(!feof(stdin))
   {
     unsigned char buf[1024];
+    unsigned char *plaintext_new;
     size_t r = fread(buf, 1, sizeof(buf), stdin);
     if(r > 0)
     {
       if(plaintext_len + r > plaintext_allocated)
       {
         plaintext_allocated *= 2;
-        plaintext = realloc(plaintext, plaintext_allocated);
-        if(plaintext == NULL)
+        plaintext_new = realloc(plaintext, plaintext_allocated);
+        if(plaintext_new == NULL)
         {
           perror("realloc");
           goto fail;
         }
+        plaintext = plaintext_new;
       }
       assert(plaintext_len + r <= plaintext_allocated);
       memcpy(plaintext + plaintext_len, buf, r);
