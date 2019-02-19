@@ -6,7 +6,7 @@
  * Demo program for libaes-siv
  */
 
-#define _ANSI_SOURCE 1
+#define _POSIX_C_SOURCE 200112L
 #define _ISOC99_SOURCE 1
 
 #include "aes_siv.h"
