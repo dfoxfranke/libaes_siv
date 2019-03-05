@@ -11,6 +11,8 @@ bench
 libaes_siv.a
 libaes_siv.so
 libaes_siv.so.*
+libaes_siv.dylib
+libaes_siv.*.dylib
 CMakeCache.txt
 CMakeFiles/
 *.cmake
