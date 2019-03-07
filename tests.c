@@ -77,7 +77,7 @@ static void test_malloc_failure(void) {
 #endif
         assert(ret == 1);
 
-        printf("Test allocation failure:\n" );
+        printf("Test allocation failure cases:\n" );
 
         do {
                 fail_allocation_counter = i++;
