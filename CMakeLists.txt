@@ -5,6 +5,8 @@ if("${CMAKE_BUILD_TYPE}" STREQUAL "")
 set(CMAKE_BUILD_TYPE Release)
 endif("${CMAKE_BUILD_TYPE}" STREQUAL "")
 
+include(GNUInstallDirs)
+
 # Warning: don't use the UB sanitizer in production builds. It can introduce timing side-channels
 # into otherwise constant-time code.
 if("${CMAKE_C_COMPILER_ID}" STREQUAL "GNU")
@@ -61,9 +63,9 @@ endif(ENABLE_SANITIZER)
 add_executable(bench EXCLUDE_FROM_ALL bench.c)
 target_link_libraries(bench aes_siv_static)
 
-install(TARGETS aes_siv LIBRARY DESTINATION lib)
-install(TARGETS aes_siv_static ARCHIVE DESTINATION lib)
-install(FILES aes_siv.h DESTINATION include)
+install(TARGETS aes_siv LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR})
+install(TARGETS aes_siv_static ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR})
+install(FILES aes_siv.h DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
 
 if(A2X)
 add_custom_target(man ALL DEPENDS
@@ -109,7 +111,7 @@ install(FILES
   ${CMAKE_CURRENT_BINARY_DIR}/AES_SIV_DecryptFinal.3
   ${CMAKE_CURRENT_BINARY_DIR}/AES_SIV_Encrypt.3
   ${CMAKE_CURRENT_BINARY_DIR}/AES_SIV_Decrypt.3
-  DESTINATION share/man/man3)
+  DESTINATION ${CMAKE_INSTALL_MANDIR}/man3)
 endif(A2X)
 
 enable_testing()
