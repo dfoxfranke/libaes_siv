@@ -84,6 +84,9 @@ To build and install on POSIX-like platforms:
     sudo make install
 ```
 
+NOTE:  Out-of-source builds are allowed, but out-of-source manpage builds
+require a2x's -D option, which may provoke an apparently bogus warning from a2x.
+
 If you want to build on an OS X machine, install the Xcode development
 environment and the command line tools, then use the Homebrew package
 manager https://brew.sh/ to install cmake and OpenSSL:
