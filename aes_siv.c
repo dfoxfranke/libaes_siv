@@ -292,7 +292,7 @@ int AES_SIV_Init(AES_SIV_CTX *ctx, unsigned char const *key, size_t key_len) {
         size_t out_len;
         int ret = 0;
 
-        ct_poison(key, sizeof key);
+        ct_poison(key, key_len);
 
         switch (key_len) {
         case 32:
