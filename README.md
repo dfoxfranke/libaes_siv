@@ -65,7 +65,7 @@ Build dependencies:
   features are required, however `<stdint.h>` must be available and
   must define `uint64_t`. `char` must be 8 bits and arithmetic must be
   two's complement.
-* [CMake](https://cmake.org) >= 3.1
+* [CMake](https://cmake.org) >= 2.8.12
 * [OpenSSL](https://openssl.org) >=1.0.1 (libcrypto only). A recent
   release from the 1.0.2 branch or later is strongly recommended since
   1.0.1 was EOL'ed at the end of 2016. Furthermore, OpenSSL versions prior

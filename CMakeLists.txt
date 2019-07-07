@@ -1,5 +1,6 @@
-cmake_minimum_required (VERSION 3.1)
-project(libaes_siv LANGUAGES C)
+cmake_minimum_required (VERSION 2.8.12)
+project(libaes_siv)
+enable_language(C)
 set(CMAKE_C_STANDARD 99)
 if("${CMAKE_BUILD_TYPE}" STREQUAL "")
 set(CMAKE_BUILD_TYPE Release)
